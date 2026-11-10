@@ -5,6 +5,11 @@ Forever's caps are MainActionBar.EndCaps.LeftEndCap.Texture and .RightEndCap.Tex
 (Blizzard_ActionBar/Mainline/MainActionBar.xml and Camelot/MainMenuBarEndCaps.xml, wow-ui-source "forever"
 branch). Blizzard's MainActionBarMixin:UpdateEndCaps sets the faction atlas each time it runs, so this re-applies
 after it with hooksecurefunc. Only textures change; no protected frame is touched, so it is safe in combat.
+
+Placement: each mode ("hug": heavy end against the bar; "corner": heavy end at the screen edge) keeps its own
+offset, in pixels outwards from the bar and upwards, mirrored for the two sides. /homeland move shows a handle
+over each cap; dragging either moves both. The handles are this addon's own frames, so Blizzard's Edit Mode
+frames are never moved.
 ]]
 local ADDON = ...
 local DIR = "Interface\\AddOns\\" .. ADDON .. "\\"
@@ -13,8 +18,22 @@ local RACE = {                  -- UnitRace's file name -> our texture name
     Human = "human", Dwarf = "dwarf", NightElf = "night_elf", Gnome = "gnome",
     Orc = "orc", Scourge = "undead", Tauren = "tauren", Troll = "troll",
 }
+local DEFAULT = { hug = { 30, 12 }, corner = { 0, 0 } }
 local on = true
-HomelandDB = HomelandDB or {}   -- .hug: heavy end against the bar, trailing off outwards (else the corner sits outside)
+local handles = {}
+
+local function DB()
+    HomelandDB = HomelandDB or {}
+    HomelandDB.offset = HomelandDB.offset or {}
+    return HomelandDB
+end
+
+local function Mode() return DB().hug and "hug" or "corner" end
+
+local function Offset()
+    local o = DB().offset[Mode()] or DEFAULT[Mode()]
+    return o[1], o[2]
+end
 
 local function Apply()
     local caps = MainActionBar and MainActionBar.EndCaps
@@ -22,21 +41,60 @@ local function Apply()
     local _, file = UnitRace("player")
     local name = RACE[file or ""]
     if not name or not on then return end
+    local out, up = Offset()
     for side, cap in pairs({ left = caps.LeftEndCap, right = caps.RightEndCap }) do
         local t = cap.Texture
-        t:SetTexture(DIR .. "cap_" .. name .. "_" .. side .. (HomelandDB.hug and "_hug" or ""))
+        t:SetTexture(DIR .. "cap_" .. name .. "_" .. side .. (DB().hug and "_hug" or ""))
         t:SetTexCoord(0, 1, 0, FILL)
         t:ClearAllPoints()
-        if HomelandDB.hug then  -- shift outwards (away from the bar) and up, so the heavy end clears the buttons
-            local x = (side == "left" and -1 or 1) * (HomelandDB.dx or 30)
-            local y = HomelandDB.dy or 12
-            t:SetPoint("TOPLEFT", cap, "TOPLEFT", x, y)
-            t:SetPoint("BOTTOMRIGHT", cap, "BOTTOMRIGHT", x, y)
-        else
-            t:SetAllPoints(cap)
-        end
+        local x = (side == "left" and -1 or 1) * out
+        t:SetPoint("TOPLEFT", cap, "TOPLEFT", x, up)
+        t:SetPoint("BOTTOMRIGHT", cap, "BOTTOMRIGHT", x, up)
     end
     caps:Show()                 -- Neutral characters (pandaren before choosing) get no caps from Blizzard
+end
+
+local function Handle(side)
+    local h = CreateFrame("Frame", nil, UIParent)
+    h:SetFrameStrata("DIALOG")
+    h:EnableMouse(true)
+    local bg = h:CreateTexture(nil, "OVERLAY")
+    bg:SetAllPoints()
+    bg:SetColorTexture(0.3, 0.8, 0.4, 0.25)
+    local label = h:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    label:SetPoint("CENTER")
+    label:SetText("drag")
+    h:SetScript("OnMouseDown", function(self)
+        local cx, cy = GetCursorPosition()
+        local out, up = Offset()
+        self.start = { cx, cy, out, up, self:GetEffectiveScale() }
+    end)
+    h:SetScript("OnMouseUp", function(self)
+        self.start = nil
+        local out, up = Offset()
+        print(("Homeland: %s offset %d out, %d up (saved)."):format(Mode(), out, up))
+    end)
+    h:SetScript("OnUpdate", function(self)
+        local s = self.start
+        if not s then return end
+        local cx, cy = GetCursorPosition()
+        local dx, dy = (cx - s[1]) / s[5], (cy - s[2]) / s[5]
+        local out = s[3] + (side == "left" and -dx or dx)   -- outwards is left for the left cap
+        DB().offset[Mode()] = { math.floor(out + 0.5), math.floor(s[4] + dy + 0.5) }
+        Apply()
+    end)
+    return h
+end
+
+local function Move(show)
+    local caps = MainActionBar and MainActionBar.EndCaps
+    if not caps then return end
+    for side, cap in pairs({ left = caps.LeftEndCap, right = caps.RightEndCap }) do
+        handles[side] = handles[side] or Handle(side)
+        handles[side]:ClearAllPoints()
+        handles[side]:SetAllPoints(cap.Texture)     -- follows the art as it moves
+        handles[side]:SetShown(show)
+    end
 end
 
 local f = CreateFrame("Frame")
@@ -54,23 +112,33 @@ SlashCmdList.HOMELAND = function(msg)
     msg = (msg or ""):lower()
     if msg == "off" then
         on = false
+        Move(false)
+        for _, cap in pairs({ MainActionBar.EndCaps.LeftEndCap, MainActionBar.EndCaps.RightEndCap }) do
+            cap.Texture:ClearAllPoints()
+            cap.Texture:SetAllPoints(cap)
+        end
         MainActionBar:UpdateEndCaps(MainActionBar.hideBarArt)   -- Blizzard puts its own art back
         print("Homeland: the gryphons are back.")
     elseif msg == "hug" or msg == "corner" then
-        HomelandDB.hug = (msg == "hug")
+        DB().hug = (msg == "hug")
         Apply()
         print(msg == "hug" and "Homeland: heavy end against the bar." or "Homeland: heavy end at the screen edge.")
-    elseif msg:match("^nudge") then
-        local x, y = msg:match("^nudge%s+(-?%d+)%s+(-?%d+)")
-        if x then HomelandDB.dx, HomelandDB.dy = tonumber(x), tonumber(y) end
+    elseif msg == "move" then
+        local showing = handles.left and handles.left:IsShown()
+        Move(not showing)
+        print(showing and "Homeland: placed." or "Homeland: drag either cap; /homeland move again when done.")
+    elseif msg == "reset" then
+        DB().offset[Mode()] = nil
         Apply()
-        print(("Homeland: hug offset %d out, %d up. /homeland nudge <out> <up>"):format(HomelandDB.dx or 30, HomelandDB.dy or 12))
+        print(("Homeland: %s position reset."):format(Mode()))
     elseif msg == "on" then
         on = true
         Apply()
         print("Homeland: homeland plants on the bar.")
     else
         local _, file = UnitRace("player")
-        print(("Homeland: race %s, art %s. /homeland off | on | hug | corner | nudge <out> <up>"):format(tostring(file), tostring(RACE[file or ""])))
+        local out, up = Offset()
+        print(("Homeland: race %s, %s mode, %d out, %d up. /homeland move | hug | corner | reset | off | on")
+            :format(tostring(file), Mode(), out, up))
     end
 end
