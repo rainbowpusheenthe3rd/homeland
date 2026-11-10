@@ -50,6 +50,9 @@ local function Apply()
         local x = (side == "left" and -1 or 1) * out
         t:SetPoint("TOPLEFT", cap, "TOPLEFT", x, up)
         t:SetPoint("BOTTOMRIGHT", cap, "BOTTOMRIGHT", x, up)
+        -- the caps keep their own opacity (/homeland caps, the panel's Bar art slider), whatever fades the bar
+        if t.SetIgnoreParentAlpha then t:SetIgnoreParentAlpha(true) end
+        t:SetAlpha(DB().capAlpha or 1)
     end
     caps:Show()                 -- Neutral characters (pandaren before choosing) get no caps from Blizzard
 end
@@ -166,6 +169,8 @@ SlashCmdList.HOMELAND = function(msg)
         for _, cap in pairs({ MainActionBar.EndCaps.LeftEndCap, MainActionBar.EndCaps.RightEndCap }) do
             cap.Texture:ClearAllPoints()
             cap.Texture:SetAllPoints(cap)
+            if cap.Texture.SetIgnoreParentAlpha then cap.Texture:SetIgnoreParentAlpha(false) end
+            cap.Texture:SetAlpha(1)
         end
         MainActionBar:UpdateEndCaps(MainActionBar.hideBarArt)   -- Blizzard puts its own art back
         print("Homeland: the gryphons are back.")
@@ -192,6 +197,10 @@ SlashCmdList.HOMELAND = function(msg)
         Map()
         print(("Homeland: minimap %s, %s, opacity %.2f, size %.2f. /homeland map square | nouveau | on | off | fade <0-1> | <size>")
             :format(DB().map == false and "off" or "on", STYLE[Style()].label, Alpha(), Size()))
+    elseif msg:match("^caps%s+[%d%.]+$") then
+        DB().capAlpha = math.max(0, math.min(1, tonumber(msg:match("[%d%.]+$"))))
+        Apply()
+        print(("Homeland: bar art opacity %.2f."):format(DB().capAlpha))
     elseif msg == "reset" then
         DB().offset[Mode()] = nil
         Apply()
@@ -204,7 +213,7 @@ SlashCmdList.HOMELAND = function(msg)
     else
         local _, file = UnitRace("player")
         local out, up = Offset()
-        print(("Homeland: race %s, %s mode, %d out, %d up. /homeland move | hug | corner | reset | off | on")
+        print(("Homeland: race %s, %s mode, %d out, %d up. /homeland move | hug | corner | reset | caps <0-1> | off | on")
             :format(tostring(file), Mode(), out, up))
     end
 end
@@ -257,7 +266,7 @@ if Minimap then
     local function Panel()
         if panel then return panel end
         panel = CreateFrame("Frame", "HomelandPanel", UIParent)
-        panel:SetSize(210, 118)
+        panel:SetSize(210, 158)
         panel:SetFrameStrata("DIALOG")
         panel:EnableMouse(true)
         local bg = panel:CreateTexture(nil, "BACKGROUND")
@@ -291,7 +300,10 @@ if Minimap then
         alpha:SetValueStep(0.05)
         local size = Slider(panel, -74, "Size")
         size:SetValueStep(0.05)
-        local quiet = false                                            -- Refresh sets values without saving them
+        local caps = Slider(panel, -114, "Bar art")                     -- the end caps, one setting for both styles
+        caps:SetMinMaxValues(0, 1)
+        caps:SetValueStep(0.05)
+        local quiet = false                                           -- Refresh sets values without saving them
         alpha:SetScript("OnValueChanged", function(self, v)
             v = math.floor(v * 20 + 0.5) / 20
             self.readout:SetText(("%d%%"):format(v * 100))
@@ -307,6 +319,13 @@ if Minimap then
             Set("size", v)
             Map()
         end)
+        caps:SetScript("OnValueChanged", function(self, v)
+            v = math.floor(v * 20 + 0.5) / 20
+            self.readout:SetText(("%d%%"):format(v * 100))
+            if quiet then return end
+            DB().capAlpha = v
+            Apply()
+        end)
         function panel.Refresh()
             local st = STYLE[Style()]
             for _, t in ipairs(panel.tabs) do
@@ -318,9 +337,10 @@ if Minimap then
             size:SetMinMaxValues(st.min, st.max)
             alpha:SetValue(DB().map == false and 0 or Alpha())
             size:SetValue(Size())
+            caps:SetValue(DB().capAlpha or 1)
             quiet = false
         end
-        panel.alpha, panel.size = alpha, size
+        panel.alpha, panel.size, panel.caps = alpha, size, caps
         tinsert(UISpecialFrames, "HomelandPanel")                      -- Escape closes it
         panel:Hide()
         return panel
@@ -330,7 +350,7 @@ if Minimap then
         self:SetAlpha(1)
         GameTooltip:SetOwner(self, "ANCHOR_LEFT")
         GameTooltip:AddLine("Homeland")
-        GameTooltip:AddLine("Click: style, opacity and size", 1, 1, 1)
+        GameTooltip:AddLine("Click: map style, opacity and size; bar art opacity", 1, 1, 1)
         GameTooltip:AddLine("Drag: move this button", 0.7, 0.7, 0.7)
         GameTooltip:Show()
     end)
