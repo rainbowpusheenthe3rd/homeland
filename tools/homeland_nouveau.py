@@ -24,7 +24,8 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "addon" / "Homeland"
 N, SS = 512, 4
 C = N / 2
-RING = N / 1.5 / 2 + 10         # just outside the map's own border
+FIT = 1.7                       # the texture is FIT x the minimap's width (the addon sizes it)
+RING = N / FIT / 2 + 20         # clear of the map's own border (about 13 px of texture)
 PHI = (1 + 5 ** 0.5) / 2
 
 # race -> (line, flower, flower centre), from each homeland's flora
@@ -40,7 +41,7 @@ PALETTE = {
 }
 
 
-def stem(side, length=520.0, curl_from=0.74, curl=4.6e-6):
+def stem(side, length=2.88 * RING, curl_from=0.74, curl=5.6e-6):
     """Points (x, y) and the heading at each, from the bottom of the ring round one side and into a curl."""
     k0 = 1 / RING
     s1 = length * curl_from
@@ -86,11 +87,12 @@ def draw(d, race_cols, shadow=False):
     line, petal, centre = race_cols
     dark = (16, 12, 20, 255)
     lc = dark if shadow else line + (235,)
-    grow = 1.8 if shadow else 0.0                    # the shadow is a touch wider
+    grow = 3.0 if shadow else 0.0                    # the shadow is a touch wider
     for side in ("left", "right"):
         pts = stem(side)
         n = len(pts)
-        taper(d, pts, 4.6 + grow, 1.4 + grow, lc)
+        gap = int(n * 0.11)                            # the bottom is left open, a cartouche for the coordinates
+        taper(d, pts[gap:], 9.0 + grow, 2.6 + grow, lc)
         # a shorter tendril branching outward at the golden section of the stem, curling the same way
         bx, by, bh = pts[int(n / PHI ** 2)]
         sgn = 1 if side == "right" else -1
@@ -102,32 +104,42 @@ def draw(d, race_cols, shadow=False):
             x += math.cos(h)
             y += math.sin(h)
             tend.append((x, y, h))
-        taper(d, tend, 3.0 + grow, 1.0 + grow, lc)
+        taper(d, tend, 6.0 + grow, 1.8 + grow, lc)
+        # a bud where the tendril's curl closes
+        tx, ty, th = tend[-1]
+        if shadow:
+            d.ellipse(((tx - 15) * SS, (ty - 15) * SS, (tx + 15) * SS, (ty + 15) * SS), fill=dark)
+        else:
+            leaf(d, tx, ty, th - sgn * 1.2, 22, 8, petal + (230,), line + (255,))
+            leaf(d, tx, ty, th - sgn * 0.6, 18, 6, petal + (200,), line + (255,))
         # leaves at golden-ratio spacing, denser towards the tip, alternating sides, shrinking as the stem thins
+        # leaves only on the outer side (never over the map), alternating a wide and a narrow angle
         for j in range(1, 9):
             s = int(n * (1 - PHI ** (-j * 0.55)))
             if s >= n * 0.74:
                 break
+            if s < gap:
+                continue
             x, y, hh = pts[s]
-            out = 1 if j % 2 else -1
-            size = 24 * (1 - s / n * 0.55)
-            ang = hh + sgn * out * 0.75 - (0 if side == "right" else 0)
-            if side == "left":
-                ang = hh - out * 0.75
+            spread = 0.95 if j % 2 else 0.55
+            ang = max((hh + spread, hh - spread),
+                      key=lambda a: (x + math.cos(a) - C) ** 2 + (y + math.sin(a) - C) ** 2)
+            size = 34 * (1 - s / n * 0.55)
             leaf(d, x, y, ang, size + grow, size * 0.32 + grow / 2, (dark if shadow else line + (150,)),
                  None if shadow else line + (235,))
-        # the flower, where the curl begins, on the outer side of the stem
+        # the flower, where the curl begins, set outward from the map's centre
         x, y, hh = pts[int(n * 0.74)]
-        nx, ny = math.cos(hh - sgn * math.pi / 2), math.sin(hh - sgn * math.pi / 2)
-        fx, fy = x + nx * 14, y + ny * 14
+        r0 = math.hypot(x - C, y - C)
+        fx, fy = x + (x - C) / r0 * 16, y + (y - C) / r0 * 16
         if shadow:
-            d.ellipse(((fx - 22) * SS, (fy - 22) * SS, (fx + 22) * SS, (fy + 22) * SS), fill=dark)
+            d.ellipse(((fx - 26) * SS, (fy - 26) * SS, (fx + 26) * SS, (fy + 26) * SS), fill=dark)
         else:
-            flower(d, fx, fy, 20, petal + (225,), centre + (255,), hh, line + (255,))
-    # the root: a pair of small leaves under the map, where the stems meet
-    for side in (-1, 1):
-        leaf(d, C, C + RING + 2, math.pi / 2 + side * 0.9, 18 + grow, 5.6 + grow / 2,
-             dark if shadow else line + (180,), None if shadow else line + (235,))
+            flower(d, fx, fy, 23, petal + (225,), centre + (255,), hh, line + (255,))
+    # a fine second line outside the stems, round the lower three quarters, so it reads as one frame
+    arc = [(C + (RING + 16) * math.cos(a), C + (RING + 16) * math.sin(a), 0.0)
+           for a in np.linspace(math.radians(-25), math.radians(205), 900)
+           if not math.radians(66) < a < math.radians(114)]                 # open under the map, like the stems
+    taper(d, arc, 2.0 + grow, 2.0 + grow, dark if shadow else line + (170,))
 
 
 def frame(race):
@@ -163,7 +175,7 @@ def main(preview=None):
         for k, im in enumerate(tiles + [tiles[0]]):
             bg = Image.new("RGBA", (N, N), (226, 230, 236, 255) if k == 8 else (44, 58, 44, 255))
             d = ImageDraw.Draw(bg)
-            r = N / 1.5 / 2
+            r = N / FIT / 2
             d.ellipse((C - r, C - r, C + r, C + r), fill=(28, 40, 30, 255), outline=(150, 120, 70, 255), width=5)
             bg.alpha_composite(im)
             sheet.alpha_composite(bg.resize((300, 300), Image.LANCZOS), ((k % 4) * 300, (k // 4) * 300))

@@ -68,10 +68,10 @@ local function Map()
     end
     map:SetFrameStrata(Minimap:GetFrameStrata())
     map:SetFrameLevel(math.max(0, Minimap:GetFrameLevel() - 1))   -- under the map and its buttons
-    -- "nouveau" (the default): line art drawn to sit on the map's ring, so its size is fixed at 1.5 x the map.
-    -- "painted": the whole concept square, quietened to half strength and dimmed.
+    -- "nouveau" (the default): line art drawn round the map's ring, so its size is fixed at 1.7 x the map
+    -- (FIT in tools/homeland_nouveau.py). "painted": the whole concept square, quietened to half strength.
     local nouveau = DB().mapStyle ~= "painted"
-    local s = (nouveau and 1.5 or (DB().mapSize or 1.65)) * Minimap:GetWidth()
+    local s = (nouveau and 1.7 or (DB().mapSize or 1.65)) * Minimap:GetWidth()
     map:SetSize(s, s)
     map:ClearAllPoints()
     map:SetPoint("CENTER", Minimap, "CENTER", 0, 0)
