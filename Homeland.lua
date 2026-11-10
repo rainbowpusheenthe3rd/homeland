@@ -73,6 +73,10 @@ local function Map()
     map:ClearAllPoints()
     map:SetPoint("CENTER", Minimap, "CENTER", 0, 0)
     map.tex:SetTexture(DIR .. "map_" .. name)
+    -- quiet by default: half strength and a little dimmed, so it frames the map without competing with it
+    local a = DB().mapAlpha or 0.5
+    map.tex:SetVertexColor(0.8, 0.8, 0.8)
+    map:SetAlpha(a)
     map:SetShown(on and DB().map ~= false)
 end
 
@@ -152,15 +156,17 @@ SlashCmdList.HOMELAND = function(msg)
         Move(not showing)
         print(showing and "Homeland: placed." or "Homeland: drag either cap; /homeland move again when done.")
     elseif msg:match("^map") then
-        local arg = msg:match("^map%s+(%S+)")
+        local arg, val = msg:match("^map%s+(%S+)%s*(%S*)")
         if arg == "off" or arg == "on" then
             DB().map = (arg == "on")
+        elseif arg == "fade" and tonumber(val) then
+            DB().mapAlpha = math.max(0, math.min(1, tonumber(val)))
         elseif tonumber(arg) then
             DB().mapSize = tonumber(arg)
         end
         Map()
-        print(("Homeland: minimap square %s, size %.2f x the map. /homeland map on | off | <size>")
-            :format(DB().map == false and "off" or "on", DB().mapSize or 1.65))
+        print(("Homeland: minimap square %s, size %.2f x the map, strength %.2f. /homeland map on | off | <size> | fade <0-1>")
+            :format(DB().map == false and "off" or "on", DB().mapSize or 1.65, DB().mapAlpha or 0.5))
     elseif msg == "reset" then
         DB().offset[Mode()] = nil
         Apply()
