@@ -14,6 +14,11 @@ New-Item -ItemType Junction -Path "<WoW folder>\_forever_\Interface\AddOns\Homel
 
 `tools/` holds the generators for its art, `tests/` its smoke tests (`uv run --with lupa python tests/<file>.py`).
 
+## Art
+
+The bar end caps and the square minimap art are cut from AI-generated race concepts (MOSS-Image, Apache-2.0),
+by `tools/homeland_caps.py`. The art nouveau minimap frames are drawn in code (`tools/homeland_nouveau.py`).
+
 ## Talks to
 
 Nothing; works alone. Stillwater uses the same race palette.
