@@ -82,6 +82,10 @@ local function Map()
     map:SetShown(on and DB().map ~= false)
 end
 
+local function Strength()
+    return DB().mapAlpha or (DB().mapStyle ~= "painted" and 1 or 0.5)
+end
+
 local function Handle(side)
     local h = CreateFrame("Frame", nil, UIParent)
     h:SetFrameStrata("DIALOG")
@@ -189,4 +193,101 @@ SlashCmdList.HOMELAND = function(msg)
         print(("Homeland: race %s, %s mode, %d out, %d up. /homeland move | hug | corner | reset | off | on")
             :format(tostring(file), Mode(), out, up))
     end
+end
+
+-- Minimap button, in Wayfinder's style: half opacity until you point at it, drag to move it round the edge.
+-- Click opens a small panel with the frame's strength slider; Escape or another click closes it.
+if Minimap then
+    local REST = 0.5
+    local b = CreateFrame("Button", "HomelandMinimapButton", Minimap)
+    b:SetSize(24, 24)
+    b:SetFrameStrata("MEDIUM")
+    b:SetFrameLevel(Minimap:GetFrameLevel() + 8)
+    b:SetAlpha(REST)
+    b:RegisterForDrag("LeftButton")
+    local icon = b:CreateTexture(nil, "ARTWORK")
+    icon:SetAllPoints()
+    icon:SetTexture("Interface\\Icons\\INV_Misc_Flower_02")          -- Peacebloom, the game's own icon
+    if icon.SetMask then icon:SetMask("Interface\\CharacterFrame\\TempPortraitAlphaMask") end
+    local function Place(angle)
+        local r = Minimap:GetWidth() / 2 + 6
+        b:ClearAllPoints()
+        b:SetPoint("CENTER", Minimap, "CENTER", r * math.cos(math.rad(angle)), r * math.sin(math.rad(angle)))
+    end
+    b:RegisterEvent("PLAYER_ENTERING_WORLD")                          -- saved variables are loaded by then
+    b:SetScript("OnEvent", function() Place(DB().buttonAngle or 200) end)
+
+    local panel
+    local function Panel()
+        if panel then return panel end
+        panel = CreateFrame("Frame", "HomelandPanel", UIParent)
+        panel:SetSize(190, 64)
+        panel:SetFrameStrata("DIALOG")
+        panel:EnableMouse(true)
+        local bg = panel:CreateTexture(nil, "BACKGROUND")
+        bg:SetAllPoints()
+        bg:SetColorTexture(0.05, 0.04, 0.08, 0.88)
+        local line = panel:CreateTexture(nil, "BORDER")                 -- one thin line along the top, nothing more
+        line:SetColorTexture(0.77, 0.73, 0.89, 0.8)
+        line:SetHeight(1)
+        line:SetPoint("TOPLEFT")
+        line:SetPoint("TOPRIGHT")
+        local title = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        title:SetPoint("TOPLEFT", 10, -8)
+        title:SetText("Homeland: frame strength")
+        local value = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        value:SetPoint("TOPRIGHT", -10, -8)
+        local sl = CreateFrame("Slider", nil, panel)
+        sl:SetOrientation("HORIZONTAL")
+        sl:SetSize(166, 16)
+        sl:SetPoint("BOTTOM", 0, 12)
+        sl:SetMinMaxValues(0, 1)
+        sl:SetValueStep(0.05)
+        if sl.SetObeyStepOnDrag then sl:SetObeyStepOnDrag(true) end
+        sl:SetThumbTexture("Interface\\Buttons\\UI-SliderBar-Button-Horizontal")
+        local track = sl:CreateTexture(nil, "BACKGROUND")
+        track:SetColorTexture(0.77, 0.73, 0.89, 0.35)
+        track:SetHeight(2)
+        track:SetPoint("LEFT")
+        track:SetPoint("RIGHT")
+        sl:SetScript("OnValueChanged", function(_, v)
+            v = math.floor(v * 20 + 0.5) / 20
+            DB().mapAlpha = v
+            DB().map = v > 0                                           -- at 0 the frame is simply off
+            Map()
+            value:SetText(("%d%%"):format(v * 100))
+        end)
+        panel.slider = sl
+        tinsert(UISpecialFrames, "HomelandPanel")                      -- Escape closes it
+        panel:Hide()
+        return panel
+    end
+
+    b:SetScript("OnEnter", function(self)
+        self:SetAlpha(1)
+        GameTooltip:SetOwner(self, "ANCHOR_LEFT")
+        GameTooltip:AddLine("Homeland")
+        GameTooltip:AddLine("Click: frame strength", 1, 1, 1)
+        GameTooltip:AddLine("Drag: move this button", 0.7, 0.7, 0.7)
+        GameTooltip:Show()
+    end)
+    b:SetScript("OnLeave", function(self) self:SetAlpha(REST); GameTooltip:Hide() end)
+    b:SetScript("OnClick", function(self)
+        local p = Panel()
+        if p:IsShown() then return p:Hide() end
+        p:ClearAllPoints()
+        p:SetPoint("TOPRIGHT", self, "BOTTOMLEFT", 0, -4)
+        p.slider:SetValue(DB().map == false and 0 or Strength())
+        p:Show()
+    end)
+    b:SetScript("OnDragStart", function(self)
+        self:SetScript("OnUpdate", function()
+            local mx, my = Minimap:GetCenter()
+            local cx, cy = GetCursorPosition()
+            local s = Minimap:GetEffectiveScale()
+            DB().buttonAngle = math.deg(math.atan2(cy / s - my, cx / s - mx))
+            Place(DB().buttonAngle)
+        end)
+    end)
+    b:SetScript("OnDragStop", function(self) self:SetScript("OnUpdate", nil) end)
 end
