@@ -1,0 +1,8 @@
+package-as: Homeland
+
+ignore:
+  - tools
+  - tests
+  - docs
+  - README.md
+  - RESEARCH.md
