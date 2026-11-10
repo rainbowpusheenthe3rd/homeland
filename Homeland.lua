@@ -27,7 +27,14 @@ local function Apply()
         t:SetTexture(DIR .. "cap_" .. name .. "_" .. side .. (HomelandDB.hug and "_hug" or ""))
         t:SetTexCoord(0, 1, 0, FILL)
         t:ClearAllPoints()
-        t:SetAllPoints(cap)
+        if HomelandDB.hug then  -- shift outwards (away from the bar) and up, so the heavy end clears the buttons
+            local x = (side == "left" and -1 or 1) * (HomelandDB.dx or 30)
+            local y = HomelandDB.dy or 12
+            t:SetPoint("TOPLEFT", cap, "TOPLEFT", x, y)
+            t:SetPoint("BOTTOMRIGHT", cap, "BOTTOMRIGHT", x, y)
+        else
+            t:SetAllPoints(cap)
+        end
     end
     caps:Show()                 -- Neutral characters (pandaren before choosing) get no caps from Blizzard
 end
@@ -53,12 +60,17 @@ SlashCmdList.HOMELAND = function(msg)
         HomelandDB.hug = (msg == "hug")
         Apply()
         print(msg == "hug" and "Homeland: heavy end against the bar." or "Homeland: heavy end at the screen edge.")
+    elseif msg:match("^nudge") then
+        local x, y = msg:match("^nudge%s+(-?%d+)%s+(-?%d+)")
+        if x then HomelandDB.dx, HomelandDB.dy = tonumber(x), tonumber(y) end
+        Apply()
+        print(("Homeland: hug offset %d out, %d up. /homeland nudge <out> <up>"):format(HomelandDB.dx or 30, HomelandDB.dy or 12))
     elseif msg == "on" then
         on = true
         Apply()
         print("Homeland: homeland plants on the bar.")
     else
         local _, file = UnitRace("player")
-        print(("Homeland: race %s, art %s. /homeland off | on | hug | corner"):format(tostring(file), tostring(RACE[file or ""])))
+        print(("Homeland: race %s, art %s. /homeland off | on | hug | corner | nudge <out> <up>"):format(tostring(file), tostring(RACE[file or ""])))
     end
 end
