@@ -14,6 +14,7 @@ local RACE = {                  -- UnitRace's file name -> our texture name
     Orc = "orc", Scourge = "undead", Tauren = "tauren", Troll = "troll",
 }
 local on = true
+HomelandDB = HomelandDB or {}   -- .hug: heavy end against the bar, trailing off outwards (else the corner sits outside)
 
 local function Apply()
     local caps = MainActionBar and MainActionBar.EndCaps
@@ -23,7 +24,7 @@ local function Apply()
     if not name or not on then return end
     for side, cap in pairs({ left = caps.LeftEndCap, right = caps.RightEndCap }) do
         local t = cap.Texture
-        t:SetTexture(DIR .. "cap_" .. name .. "_" .. side)
+        t:SetTexture(DIR .. "cap_" .. name .. "_" .. side .. (HomelandDB.hug and "_hug" or ""))
         t:SetTexCoord(0, 1, 0, FILL)
         t:ClearAllPoints()
         t:SetAllPoints(cap)
@@ -48,12 +49,16 @@ SlashCmdList.HOMELAND = function(msg)
         on = false
         MainActionBar:UpdateEndCaps(MainActionBar.hideBarArt)   -- Blizzard puts its own art back
         print("Homeland: the gryphons are back.")
+    elseif msg == "hug" or msg == "corner" then
+        HomelandDB.hug = (msg == "hug")
+        Apply()
+        print(msg == "hug" and "Homeland: heavy end against the bar." or "Homeland: heavy end at the screen edge.")
     elseif msg == "on" then
         on = true
         Apply()
         print("Homeland: homeland plants on the bar.")
     else
         local _, file = UnitRace("player")
-        print(("Homeland: race %s, art %s. /homeland off | on"):format(tostring(file), tostring(RACE[file or ""])))
+        print(("Homeland: race %s, art %s. /homeland off | on | hug | corner"):format(tostring(file), tostring(RACE[file or ""])))
     end
 end

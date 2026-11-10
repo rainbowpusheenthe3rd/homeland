@@ -76,6 +76,10 @@ def main(src, preview=None):
         for side in ("left", "right"):
             im = cap(img, side, INSET.get(race, 0.06))
             write_tga(im, OUT / f"cap_{race.lower()}_{side}.tga")
+            # "hug": the same cap mirrored, so its heavy corner sits against the bar and it trails off outwards
+            hug = Image.new("RGBA", (256, 256), (0, 0, 0, 0))
+            hug.paste(im.crop((0, 0, W, H)).transpose(Image.FLIP_LEFT_RIGHT), (0, 0))
+            write_tga(hug, OUT / f"cap_{race.lower()}_{side}_hug.tga")
             pair.append(im.crop((0, 0, W, H)))
         tiles.append(pair)
     if preview:   # each race: left cap, a stand-in bar, right cap, on a mid-grey like the game's HUD
