@@ -54,8 +54,30 @@ local function Apply()
     caps:Show()                 -- Neutral characters (pandaren before choosing) get no caps from Blizzard
 end
 
--- The whole concept square behind the minimap, its empty centre round the map. Size is the square's width as a
--- multiple of the minimap's: the concepts' open centre is about 60% of their width, so 1.65 frames the map.
+-- The whole concept square behind the minimap, its empty centre round the map (the default, "painted"), or the
+-- line-art frame ("nouveau"). Size is the art's width as a multiple of the minimap's: the concepts' open centre is
+-- about 60% of their width, so 1.65 just frames the map and the default 1.45 tucks the art in closer. The
+-- nouveau frame is drawn for exactly 1.7 (FIT in tools/homeland_nouveau.py). Each style keeps its own settings.
+-- per style: default opacity and size, and the size range the panel's slider allows (the line frame can't go
+-- under 1.6 or its stems would cross onto the map)
+local STYLE = {
+    painted = { label = "Square", alpha = 0.5, size = 1.45, min = 1.2, max = 2.2 },
+    nouveau = { label = "Art nouveau", alpha = 1, size = 1.7, min = 1.6, max = 2.2 },
+}
+local function Style() return DB().mapStyle == "nouveau" and "nouveau" or "painted" end
+local function Setting(key)
+    DB().style = DB().style or {}
+    local own = DB().style[Style()] or {}
+    return own[key] or STYLE[Style()][key]
+end
+local function Set(key, v)
+    DB().style = DB().style or {}
+    DB().style[Style()] = DB().style[Style()] or {}
+    DB().style[Style()][key] = v
+end
+local function Alpha() return Setting("alpha") end
+local function Size() return Setting("size") end
+
 local map
 local function Map()
     local _, file = UnitRace("player")
@@ -68,22 +90,16 @@ local function Map()
     end
     map:SetFrameStrata(Minimap:GetFrameStrata())
     map:SetFrameLevel(math.max(0, Minimap:GetFrameLevel() - 1))   -- under the map and its buttons
-    -- "nouveau" (the default): line art drawn round the map's ring, so its size is fixed at 1.7 x the map
-    -- (FIT in tools/homeland_nouveau.py). "painted": the whole concept square, quietened to half strength.
-    local nouveau = DB().mapStyle ~= "painted"
-    local s = (nouveau and 1.7 or (DB().mapSize or 1.65)) * Minimap:GetWidth()
+    local nouveau = Style() == "nouveau"
+    local s = Size() * Minimap:GetWidth()
     map:SetSize(s, s)
     map:ClearAllPoints()
     map:SetPoint("CENTER", Minimap, "CENTER", 0, 0)
     map.tex:SetTexture(DIR .. (nouveau and "nouveau_" or "map_") .. name)
     local dim = nouveau and 1 or 0.8
     map.tex:SetVertexColor(dim, dim, dim)
-    map:SetAlpha(DB().mapAlpha or (nouveau and 1 or 0.5))
+    map:SetAlpha(Alpha())
     map:SetShown(on and DB().map ~= false)
-end
-
-local function Strength()
-    return DB().mapAlpha or (DB().mapStyle ~= "painted" and 1 or 0.5)
 end
 
 local function Handle(side)
@@ -165,19 +181,17 @@ SlashCmdList.HOMELAND = function(msg)
         local arg, val = msg:match("^map%s+(%S+)%s*(%S*)")
         if arg == "off" or arg == "on" then
             DB().map = (arg == "on")
-        elseif arg == "nouveau" or arg == "painted" then
-            DB().mapStyle = arg
-            DB().mapAlpha = nil                 -- each style starts at its own strength
+        elseif arg == "nouveau" or arg == "painted" or arg == "square" then
+            DB().mapStyle = arg == "nouveau" and "nouveau" or "painted"
         elseif arg == "fade" and tonumber(val) then
-            DB().mapAlpha = math.max(0, math.min(1, tonumber(val)))
+            Set("alpha", math.max(0, math.min(1, tonumber(val))))
         elseif tonumber(arg) then
-            DB().mapSize = tonumber(arg)
+            local st = STYLE[Style()]
+            Set("size", math.max(st.min, math.min(st.max, tonumber(arg))))
         end
         Map()
-        local nouveau = DB().mapStyle ~= "painted"
-        print(("Homeland: minimap frame %s, %s, strength %.2f. /homeland map nouveau | painted | on | off | fade <0-1> | <size> (painted)")
-            :format(DB().map == false and "off" or "on", nouveau and "nouveau" or "painted",
-                DB().mapAlpha or (nouveau and 1 or 0.5)))
+        print(("Homeland: minimap %s, %s, opacity %.2f, size %.2f. /homeland map square | nouveau | on | off | fade <0-1> | <size>")
+            :format(DB().map == false and "off" or "on", STYLE[Style()].label, Alpha(), Size()))
     elseif msg == "reset" then
         DB().offset[Mode()] = nil
         Apply()
@@ -196,7 +210,7 @@ SlashCmdList.HOMELAND = function(msg)
 end
 
 -- Minimap button, in Wayfinder's style: half opacity until you point at it, drag to move it round the edge.
--- Click opens a small panel with the frame's strength slider; Escape or another click closes it.
+-- Click opens a small panel: Square / Art nouveau tabs, Opacity and Size; Escape or another click closes it.
 if Minimap then
     local REST = 0.5
     local b = CreateFrame("Button", "HomelandMinimapButton", Minimap)
@@ -217,47 +231,96 @@ if Minimap then
     b:RegisterEvent("PLAYER_ENTERING_WORLD")                          -- saved variables are loaded by then
     b:SetScript("OnEvent", function() Place(DB().buttonAngle or 200) end)
 
+    -- the panel: a tab per style (Square, Art nouveau), then Opacity and Size sliders for the chosen style
     local panel
+    local LAV = { 0.77, 0.73, 0.89 }
+    local function Slider(parent, y, label)
+        local name = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        name:SetPoint("TOPLEFT", 10, y)
+        name:SetText(label)
+        local value = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        value:SetPoint("TOPRIGHT", -10, y)
+        local sl = CreateFrame("Slider", nil, parent)
+        sl:SetOrientation("HORIZONTAL")
+        sl:SetSize(186, 16)
+        sl:SetPoint("TOP", 0, y - 14)
+        sl:SetThumbTexture("Interface\\Buttons\\UI-SliderBar-Button-Horizontal")
+        if sl.SetObeyStepOnDrag then sl:SetObeyStepOnDrag(true) end
+        local track = sl:CreateTexture(nil, "BACKGROUND")
+        track:SetColorTexture(LAV[1], LAV[2], LAV[3], 0.35)
+        track:SetHeight(2)
+        track:SetPoint("LEFT")
+        track:SetPoint("RIGHT")
+        sl.readout = value
+        return sl
+    end
     local function Panel()
         if panel then return panel end
         panel = CreateFrame("Frame", "HomelandPanel", UIParent)
-        panel:SetSize(190, 64)
+        panel:SetSize(210, 118)
         panel:SetFrameStrata("DIALOG")
         panel:EnableMouse(true)
         local bg = panel:CreateTexture(nil, "BACKGROUND")
         bg:SetAllPoints()
         bg:SetColorTexture(0.05, 0.04, 0.08, 0.88)
         local line = panel:CreateTexture(nil, "BORDER")                 -- one thin line along the top, nothing more
-        line:SetColorTexture(0.77, 0.73, 0.89, 0.8)
+        line:SetColorTexture(LAV[1], LAV[2], LAV[3], 0.8)
         line:SetHeight(1)
         line:SetPoint("TOPLEFT")
         line:SetPoint("TOPRIGHT")
-        local title = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-        title:SetPoint("TOPLEFT", 10, -8)
-        title:SetText("Homeland: frame strength")
-        local value = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-        value:SetPoint("TOPRIGHT", -10, -8)
-        local sl = CreateFrame("Slider", nil, panel)
-        sl:SetOrientation("HORIZONTAL")
-        sl:SetSize(166, 16)
-        sl:SetPoint("BOTTOM", 0, 12)
-        sl:SetMinMaxValues(0, 1)
-        sl:SetValueStep(0.05)
-        if sl.SetObeyStepOnDrag then sl:SetObeyStepOnDrag(true) end
-        sl:SetThumbTexture("Interface\\Buttons\\UI-SliderBar-Button-Horizontal")
-        local track = sl:CreateTexture(nil, "BACKGROUND")
-        track:SetColorTexture(0.77, 0.73, 0.89, 0.35)
-        track:SetHeight(2)
-        track:SetPoint("LEFT")
-        track:SetPoint("RIGHT")
-        sl:SetScript("OnValueChanged", function(_, v)
+        panel.tabs = {}
+        for i, key in ipairs({ "painted", "nouveau" }) do
+            local t = CreateFrame("Button", nil, panel)
+            t:SetSize(95, 20)
+            t:SetPoint("TOPLEFT", 8 + (i - 1) * 99, -6)
+            t.bg = t:CreateTexture(nil, "BACKGROUND")
+            t.bg:SetAllPoints()
+            t.text = t:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+            t.text:SetPoint("CENTER")
+            t.text:SetText(STYLE[key].label)
+            t.key = key
+            t:SetScript("OnClick", function()
+                DB().mapStyle = key
+                Map()
+                panel.Refresh()
+            end)
+            panel.tabs[i] = t
+        end
+        local alpha = Slider(panel, -34, "Opacity")
+        alpha:SetMinMaxValues(0, 1)
+        alpha:SetValueStep(0.05)
+        local size = Slider(panel, -74, "Size")
+        size:SetValueStep(0.05)
+        local quiet = false                                            -- Refresh sets values without saving them
+        alpha:SetScript("OnValueChanged", function(self, v)
             v = math.floor(v * 20 + 0.5) / 20
-            DB().mapAlpha = v
+            self.readout:SetText(("%d%%"):format(v * 100))
+            if quiet then return end
+            Set("alpha", v)
             DB().map = v > 0                                           -- at 0 the frame is simply off
             Map()
-            value:SetText(("%d%%"):format(v * 100))
         end)
-        panel.slider = sl
+        size:SetScript("OnValueChanged", function(self, v)
+            v = math.floor(v * 20 + 0.5) / 20
+            self.readout:SetText(("%.2fx the map"):format(v))
+            if quiet then return end
+            Set("size", v)
+            Map()
+        end)
+        function panel.Refresh()
+            local st = STYLE[Style()]
+            for _, t in ipairs(panel.tabs) do
+                local on = t.key == Style()
+                t.bg:SetColorTexture(LAV[1], LAV[2], LAV[3], on and 0.28 or 0.06)
+                t.text:SetTextColor(on and 1 or 0.6, on and 0.95 or 0.58, on and 1 or 0.68)
+            end
+            quiet = true
+            size:SetMinMaxValues(st.min, st.max)
+            alpha:SetValue(DB().map == false and 0 or Alpha())
+            size:SetValue(Size())
+            quiet = false
+        end
+        panel.alpha, panel.size = alpha, size
         tinsert(UISpecialFrames, "HomelandPanel")                      -- Escape closes it
         panel:Hide()
         return panel
@@ -267,7 +330,7 @@ if Minimap then
         self:SetAlpha(1)
         GameTooltip:SetOwner(self, "ANCHOR_LEFT")
         GameTooltip:AddLine("Homeland")
-        GameTooltip:AddLine("Click: frame strength", 1, 1, 1)
+        GameTooltip:AddLine("Click: style, opacity and size", 1, 1, 1)
         GameTooltip:AddLine("Drag: move this button", 0.7, 0.7, 0.7)
         GameTooltip:Show()
     end)
@@ -277,7 +340,7 @@ if Minimap then
         if p:IsShown() then return p:Hide() end
         p:ClearAllPoints()
         p:SetPoint("TOPRIGHT", self, "BOTTOMLEFT", 0, -4)
-        p.slider:SetValue(DB().map == false and 0 or Strength())
+        p.Refresh()
         p:Show()
     end)
     b:SetScript("OnDragStart", function(self)
