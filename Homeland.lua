@@ -68,15 +68,17 @@ local function Map()
     end
     map:SetFrameStrata(Minimap:GetFrameStrata())
     map:SetFrameLevel(math.max(0, Minimap:GetFrameLevel() - 1))   -- under the map and its buttons
-    local s = (DB().mapSize or 1.65) * Minimap:GetWidth()
+    -- "nouveau" (the default): line art drawn to sit on the map's ring, so its size is fixed at 1.5 x the map.
+    -- "painted": the whole concept square, quietened to half strength and dimmed.
+    local nouveau = DB().mapStyle ~= "painted"
+    local s = (nouveau and 1.5 or (DB().mapSize or 1.65)) * Minimap:GetWidth()
     map:SetSize(s, s)
     map:ClearAllPoints()
     map:SetPoint("CENTER", Minimap, "CENTER", 0, 0)
-    map.tex:SetTexture(DIR .. "map_" .. name)
-    -- quiet by default: half strength and a little dimmed, so it frames the map without competing with it
-    local a = DB().mapAlpha or 0.5
-    map.tex:SetVertexColor(0.8, 0.8, 0.8)
-    map:SetAlpha(a)
+    map.tex:SetTexture(DIR .. (nouveau and "nouveau_" or "map_") .. name)
+    local dim = nouveau and 1 or 0.8
+    map.tex:SetVertexColor(dim, dim, dim)
+    map:SetAlpha(DB().mapAlpha or (nouveau and 1 or 0.5))
     map:SetShown(on and DB().map ~= false)
 end
 
@@ -159,14 +161,19 @@ SlashCmdList.HOMELAND = function(msg)
         local arg, val = msg:match("^map%s+(%S+)%s*(%S*)")
         if arg == "off" or arg == "on" then
             DB().map = (arg == "on")
+        elseif arg == "nouveau" or arg == "painted" then
+            DB().mapStyle = arg
+            DB().mapAlpha = nil                 -- each style starts at its own strength
         elseif arg == "fade" and tonumber(val) then
             DB().mapAlpha = math.max(0, math.min(1, tonumber(val)))
         elseif tonumber(arg) then
             DB().mapSize = tonumber(arg)
         end
         Map()
-        print(("Homeland: minimap square %s, size %.2f x the map, strength %.2f. /homeland map on | off | <size> | fade <0-1>")
-            :format(DB().map == false and "off" or "on", DB().mapSize or 1.65, DB().mapAlpha or 0.5))
+        local nouveau = DB().mapStyle ~= "painted"
+        print(("Homeland: minimap frame %s, %s, strength %.2f. /homeland map nouveau | painted | on | off | fade <0-1> | <size> (painted)")
+            :format(DB().map == false and "off" or "on", nouveau and "nouveau" or "painted",
+                DB().mapAlpha or (nouveau and 1 or 0.5)))
     elseif msg == "reset" then
         DB().offset[Mode()] = nil
         Apply()
