@@ -2,7 +2,7 @@ r"""Homeland's art nouveau minimap frame: thin line art that follows the round m
 
   uv run --no-project --with pillow --with numpy python tools/homeland_nouveau.py [--preview <png>]
 
-Writes addon/Homeland/nouveau_<race>.tga (512 x 512). The addon sizes the texture to 1.5 x the minimap's width,
+Writes nouveau_<race>.tga (512 x 512). The addon sizes the texture to 1.5 x the minimap's width,
 so the map's ring sits at radius 512 / 1.5 / 2 = 171 px.
 
 Grown, not placed: two stems root at the bottom and follow the ring up each side. Each stem's curvature is the
@@ -21,7 +21,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 
 ROOT = Path(__file__).resolve().parents[1]
-OUT = ROOT / "addon" / "Homeland"
+OUT = ROOT
 N, SS = 512, 4
 C = N / 2
 FIT = 1.7                       # the texture is FIT x the minimap's width (the addon sizes it)

@@ -3,7 +3,7 @@ gryphon or wyvern.
 
   uv run --with pillow --with numpy python tools/homeland_caps.py <concept dir> [--preview <png>]
 
-Reads concept_<Race>.png (768 px MOSS concepts, dark background) and writes addon/Homeland/cap_<race>_<side>.tga.
+Reads concept_<Race>.png (768 px MOSS concepts, dark background) and writes cap_<race>_<side>.tga.
 The left cap is the concept's bottom-left corner (where its plants root and climb), the right cap its bottom-right,
 at the end caps' 154 x 95 aspect. The dark background is keyed out to alpha by its distance from the corner
 colour, so only the plants show. Each TGA is 256 x 256 with the cap in its top 158 rows (the addon sets the
@@ -16,7 +16,7 @@ import numpy as np
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
-OUT = ROOT / "addon" / "Homeland"
+OUT = ROOT
 RACES = ["Human", "Dwarf", "Night_Elf", "Gnome", "Orc", "Undead", "Tauren", "Troll"]
 W, H = 256, 158                      # 154 x 95 aspect
 CROP_W = 0.46                        # fraction of the concept's width taken for one cap
