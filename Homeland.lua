@@ -54,6 +54,28 @@ local function Apply()
     caps:Show()                 -- Neutral characters (pandaren before choosing) get no caps from Blizzard
 end
 
+-- The whole concept square behind the minimap, its empty centre round the map. Size is the square's width as a
+-- multiple of the minimap's: the concepts' open centre is about 60% of their width, so 1.65 frames the map.
+local map
+local function Map()
+    local _, file = UnitRace("player")
+    local name = RACE[file or ""]
+    if not name or not Minimap then return end
+    if not map then
+        map = CreateFrame("Frame", nil, Minimap:GetParent() or UIParent)
+        map.tex = map:CreateTexture(nil, "BACKGROUND")
+        map.tex:SetAllPoints()
+    end
+    map:SetFrameStrata(Minimap:GetFrameStrata())
+    map:SetFrameLevel(math.max(0, Minimap:GetFrameLevel() - 1))   -- under the map and its buttons
+    local s = (DB().mapSize or 1.65) * Minimap:GetWidth()
+    map:SetSize(s, s)
+    map:ClearAllPoints()
+    map:SetPoint("CENTER", Minimap, "CENTER", 0, 0)
+    map.tex:SetTexture(DIR .. "map_" .. name)
+    map:SetShown(on and DB().map ~= false)
+end
+
 local function Handle(side)
     local h = CreateFrame("Frame", nil, UIParent)
     h:SetFrameStrata("DIALOG")
@@ -105,6 +127,7 @@ f:SetScript("OnEvent", function()
         f.hooked = true
     end
     Apply()
+    Map()
 end)
 
 SLASH_HOMELAND1 = "/homeland"
@@ -113,6 +136,7 @@ SlashCmdList.HOMELAND = function(msg)
     if msg == "off" then
         on = false
         Move(false)
+        Map()
         for _, cap in pairs({ MainActionBar.EndCaps.LeftEndCap, MainActionBar.EndCaps.RightEndCap }) do
             cap.Texture:ClearAllPoints()
             cap.Texture:SetAllPoints(cap)
@@ -127,12 +151,23 @@ SlashCmdList.HOMELAND = function(msg)
         local showing = handles.left and handles.left:IsShown()
         Move(not showing)
         print(showing and "Homeland: placed." or "Homeland: drag either cap; /homeland move again when done.")
+    elseif msg:match("^map") then
+        local arg = msg:match("^map%s+(%S+)")
+        if arg == "off" or arg == "on" then
+            DB().map = (arg == "on")
+        elseif tonumber(arg) then
+            DB().mapSize = tonumber(arg)
+        end
+        Map()
+        print(("Homeland: minimap square %s, size %.2f x the map. /homeland map on | off | <size>")
+            :format(DB().map == false and "off" or "on", DB().mapSize or 1.65))
     elseif msg == "reset" then
         DB().offset[Mode()] = nil
         Apply()
         print(("Homeland: %s position reset."):format(Mode()))
     elseif msg == "on" then
         on = true
+        Map()
         Apply()
         print("Homeland: homeland plants on the bar.")
     else

@@ -82,6 +82,16 @@ def main(src, preview=None):
             write_tga(hug, OUT / f"cap_{race.lower()}_{side}_hug.tga")
             pair.append(im.crop((0, 0, W, H)))
         tiles.append(pair)
+        # the whole square, for round the minimap: keyed the same way, edges faded so nothing is ruled
+        bg = np.median(np.concatenate([img[:24, :24].reshape(-1, 3), img[:24, -24:].reshape(-1, 3)]), axis=0)
+        alpha = np.clip((np.linalg.norm(img - bg, axis=-1) - 18) / 50, 0, 1)
+        n = img.shape[0]
+        i = np.arange(n)
+        e = np.minimum(np.minimum(i, i[::-1])[None, :], np.minimum(i, i[::-1])[:, None])   # distance to an edge
+        alpha = alpha * np.clip(e / 12, 0, 1)
+        sq = Image.fromarray((np.dstack([img / 255, alpha]) * 255).astype("uint8"), "RGBA").resize((512, 512),
+                                                                                                   Image.LANCZOS)
+        write_tga(sq, OUT / f"map_{race.lower()}.tga")
     if preview:   # each race: left cap, a stand-in bar, right cap, on a mid-grey like the game's HUD
         sheet = Image.new("RGBA", (2 * W + 300, len(tiles) * (H + 10)), (70, 70, 74, 255))
         for k, (l, r) in enumerate(tiles):
