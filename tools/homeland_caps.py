@@ -20,25 +20,38 @@ OUT = ROOT / "addon" / "Homeland"
 RACES = ["Human", "Dwarf", "Night_Elf", "Gnome", "Orc", "Undead", "Tauren", "Troll"]
 W, H = 256, 158                      # 154 x 95 aspect
 CROP_W = 0.46                        # fraction of the concept's width taken for one cap
+INSET = {"Night_Elf": 0.12}       # step in from the outer and bottom edges, past the concept's printed border
+TAPER = 0.40                         # the inner end fades over this fraction of the cap, so stems thin out
+                                     # before the bar instead of running onto its buttons
 
 
-def cap(img, side):
+def cap(img, side, inset=0.06):
     """Crop one bottom corner at the cap's aspect, keyed to RGBA."""
     n = img.shape[1]
     cw = int(n * CROP_W)
     ch = int(cw * H / W)
-    y0 = img.shape[0] - ch
-    crop = img[y0:, :cw] if side == "left" else img[y0:, n - cw:]
+    m = int(n * inset)
+    y1 = img.shape[0] - m
+    crop = img[y1 - ch:y1, m:m + cw] if side == "left" else img[y1 - ch:y1, n - m - cw:n - m]
     bg = np.median(np.concatenate([img[:24, :24].reshape(-1, 3), img[:24, -24:].reshape(-1, 3)]), axis=0)
     dist = np.linalg.norm(crop - bg, axis=-1)
     alpha = np.clip((dist - 18) / 50, 0, 1)
-    edge = np.ones_like(alpha)                   # fade the two inner edges so the crop has no hard border
-    ramp = np.linspace(0, 1, 24)
+    edge = np.ones_like(alpha)
+    t = int(cw * TAPER)                          # inner end: a long smoothstep fade
+    s = np.linspace(1, 0, t)
+    s = s * s * (3 - 2 * s)
     if side == "left":
-        edge[:, -24:] *= ramp[::-1]
+        edge[:, -t:] *= s
     else:
-        edge[:, :24] *= ramp
-    edge[:24, :] *= ramp[:, None]
+        edge[:, :t] *= s[::-1]
+    o = 16                                       # outer, bottom and top: short fades so no edge is ruled
+    ramp = np.linspace(0, 1, o)
+    edge[:o, :] *= ramp[:, None]
+    edge[-o:, :] *= ramp[::-1][:, None]
+    if side == "left":
+        edge[:, :o] *= ramp
+    else:
+        edge[:, -o:] *= ramp[::-1]
     rgba = np.dstack([crop / 255, alpha * edge])
     im = Image.fromarray((rgba * 255).astype("uint8"), "RGBA").resize((W, H), Image.LANCZOS)
     full = Image.new("RGBA", (256, 256), (0, 0, 0, 0))
@@ -61,7 +74,7 @@ def main(src, preview=None):
         img = np.asarray(Image.open(Path(src) / f"concept_{race}.png").convert("RGB")).astype(float)
         pair = []
         for side in ("left", "right"):
-            im = cap(img, side)
+            im = cap(img, side, INSET.get(race, 0.06))
             write_tga(im, OUT / f"cap_{race.lower()}_{side}.tga")
             pair.append(im.crop((0, 0, W, H)))
         tiles.append(pair)
