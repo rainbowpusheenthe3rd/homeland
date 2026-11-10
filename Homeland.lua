@@ -6,7 +6,7 @@ Forever's caps are MainActionBar.EndCaps.LeftEndCap.Texture and .RightEndCap.Tex
 branch). Blizzard's MainActionBarMixin:UpdateEndCaps sets the faction atlas each time it runs, so this re-applies
 after it with hooksecurefunc. Only textures change; no protected frame is touched, so it is safe in combat.
 
-Placement: each mode ("hug": heavy end against the bar; "corner": heavy end at the screen edge) keeps its own
+Placement: each mode ("hug" (the default, placed in game: 31 out, 6 up): heavy end against the bar; "corner": heavy end at the screen edge) keeps its own
 offset, in pixels outwards from the bar and upwards, mirrored for the two sides. /homeland move shows a handle
 over each cap; dragging either moves both. The handles are this addon's own frames, so Blizzard's Edit Mode
 frames are never moved.
@@ -18,7 +18,7 @@ local RACE = {                  -- UnitRace's file name -> our texture name
     Human = "human", Dwarf = "dwarf", NightElf = "night_elf", Gnome = "gnome",
     Orc = "orc", Scourge = "undead", Tauren = "tauren", Troll = "troll",
 }
-local DEFAULT = { hug = { 30, 12 }, corner = { 0, 0 } }
+local DEFAULT = { hug = { 31, 6 }, corner = { 0, 0 } }
 local on = true
 local handles = {}
 
@@ -28,7 +28,7 @@ local function DB()
     return HomelandDB
 end
 
-local function Mode() return DB().hug and "hug" or "corner" end
+local function Mode() return DB().hug == false and "corner" or "hug" end
 
 local function Offset()
     local o = DB().offset[Mode()] or DEFAULT[Mode()]
@@ -44,7 +44,7 @@ local function Apply()
     local out, up = Offset()
     for side, cap in pairs({ left = caps.LeftEndCap, right = caps.RightEndCap }) do
         local t = cap.Texture
-        t:SetTexture(DIR .. "cap_" .. name .. "_" .. side .. (DB().hug and "_hug" or ""))
+        t:SetTexture(DIR .. "cap_" .. name .. "_" .. side .. (Mode() == "hug" and "_hug" or ""))
         t:SetTexCoord(0, 1, 0, FILL)
         t:ClearAllPoints()
         local x = (side == "left" and -1 or 1) * out
