@@ -19,14 +19,10 @@ New-Item -ItemType Junction -Path "<WoW folder>\_forever_\Interface\AddOns\Homel
 The bar end caps and the square minimap art are cut from AI-generated race concepts (MOSS-Image, Apache-2.0),
 by `tools/homeland_caps.py`. The art nouveau minimap frames are drawn in code (`tools/homeland_nouveau.py`).
 
+![The art nouveau minimap frame in game](docs/nouveau_ingame.png)
+
+![The art nouveau frames, one per race palette](docs/nouveau_frames.png)
+
 ## Talks to
 
 Nothing; works alone. Stillwater uses the same race palette.
-
-## Releasing
-
-```sh
-git tag -a v1.2.0 -m "1.2.0" && git push origin v1.2.0      # builds the zip, makes the GitHub Release
-```
-
-CurseForge uploads are by hand for now, from the zip on the GitHub Release; nothing uploads there automatically.
