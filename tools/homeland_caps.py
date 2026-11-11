@@ -30,8 +30,8 @@ INSET = {"Night_Elf": 0.12}       # step in from the outer and bottom edges, pas
 TAPER = 0.40                         # the inner end fades over this fraction of the cap, so stems thin out
                                      # before the bar instead of running onto its buttons
 KEY_FLOOR = 14                       # colour distance from the ground (0-441) below which a pixel is ground
-KEY_WIDTH = 14                       # ... and over which it ramps to fully opaque
-SATURATION = 1.25                    # colour lift after un-mixing
+KEY_WIDTH = 10                       # ... and over which it ramps to fully opaque
+SATURATION = 1.4                     # colour lift after un-mixing
 UNMIX_MIN = 0.05                     # alpha floor when un-mixing, so near-transparent rims don't blow out
 CORNER = 24                          # the ground colour is the median of this many pixels in each top corner
 
