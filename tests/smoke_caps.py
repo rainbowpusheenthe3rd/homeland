@@ -17,6 +17,7 @@ local function tex(name)
   return stub({ name = name, points = {},
     SetTexture = function(s, p) s.path = p end, SetAtlas = function(s, a) s.path = "atlas:" .. a end,
     SetAlpha = function(s, a) s.alpha = a end, Show = function(s) s.shown = true end, Hide = function(s) s.shown = false end,
+    SetShown = function(s, v) s.shown = v and true or false end,
     SetPoint = function(s, p, rel, rp, x, y) s.points[p] = { x, y } end, ClearAllPoints = function(s) s.points = {} end })
 end
 local function cap(t) t.GetFrameStrata = function() return "MEDIUM" end; t.GetFrameLevel = function() return 3 end; return t end
@@ -81,4 +82,12 @@ lua.execute("SlashCmdList.HOMELAND('corner')")
 assert pt("Left") == (0, 0), "corner keeps its own offset"
 lua.execute("SlashCmdList.HOMELAND('hug'); SlashCmdList.HOMELAND('reset')")
 assert pt("Left") == (-31, 6), pt("Left")
+# above 100% a second copy stacks on top at the extra opacity; at 100% it's hidden
+copies = lambda: [(x.alpha, x.shown) for x in lua.eval("frames[2].texs").values() if "_left" in (x.path or "")]
+lua.execute("SlashCmdList.HOMELAND('caps 1.5')")
+assert copies() == [(1, True), (0.5, True)], copies()
+lua.execute("SlashCmdList.HOMELAND('caps 1')")
+assert copies() == [(1, True), (0, False)], copies()
+lua.execute("SlashCmdList.HOMELAND('caps 9')")
+assert copies() == [(1, True), (1, True)], "capped at 200%"
 print("all checks pass;", list(lua.eval("log").values()))

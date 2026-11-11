@@ -35,9 +35,11 @@ local function Offset()
     return o[1], o[2]
 end
 
--- The cap art is drawn on Homeland's own frame, not on Blizzard's cap textures: anything that fades the action bar
--- (Stillwater) would fade those too, and SetIgnoreParentAlpha didn't stop it in game (11 Nov 2026: caps at 100%
--- still dimmed with Stillwater's fade). Blizzard's own cap textures are kept at 0 opacity while Homeland is on.
+-- The cap art is drawn on Homeland's own frame, not on Blizzard's cap textures, so nothing that fades the action
+-- bar (Stillwater) can fade it; Blizzard's own cap textures are kept at 0 opacity while Homeland is on.
+-- Bar art goes to 200% (11 Nov 2026): the painted caps are only partly opaque (night elf: a third of the visible
+-- pixels fully opaque, median alpha 192/255, /homeland debug showed ours at 1.00 while it still looked faint), so
+-- above 100% a second copy is stacked on top at the extra opacity.
 local holder, own = nil, {}
 local function Own(side, cap)
     if not holder then
@@ -48,7 +50,8 @@ local function Own(side, cap)
     holder:SetFrameLevel(cap:GetFrameLevel())
     holder:Show()
     own[side] = own[side] or holder:CreateTexture(nil, "OVERLAY")
-    return own[side]
+    own[side .. "2"] = own[side .. "2"] or holder:CreateTexture(nil, "OVERLAY", nil, 1)
+    return own[side], own[side .. "2"]
 end
 
 local function Apply()
@@ -60,16 +63,18 @@ local function Apply()
     local out, up = Offset()
     for side, cap in pairs({ left = caps.LeftEndCap, right = caps.RightEndCap }) do
         cap.Texture:SetAlpha(0)
-        local t = Own(side, cap)
-        t:SetTexture(DIR .. "cap_" .. name .. "_" .. side .. (Mode() == "hug" and "_hug" or ""))
-        t:SetTexCoord(0, 1, 0, FILL)
-        t:ClearAllPoints()
+        local a = DB().capAlpha or 1   -- /homeland caps, the panel's Bar art slider: 0 to 2
         local x = (side == "left" and -1 or 1) * out
-        t:SetPoint("TOPLEFT", cap, "TOPLEFT", x, up)
-        t:SetPoint("BOTTOMRIGHT", cap, "BOTTOMRIGHT", x, up)
-        -- the caps keep their own opacity (/homeland caps, the panel's Bar art slider), whatever fades the bar
-        t:SetAlpha(DB().capAlpha or 1)
-        t:Show()
+        for i, t in ipairs({ Own(side, cap) }) do
+            t:SetTexture(DIR .. "cap_" .. name .. "_" .. side .. (Mode() == "hug" and "_hug" or ""))
+            t:SetTexCoord(0, 1, 0, FILL)
+            t:ClearAllPoints()
+            t:SetPoint("TOPLEFT", cap, "TOPLEFT", x, up)
+            t:SetPoint("BOTTOMRIGHT", cap, "BOTTOMRIGHT", x, up)
+            local layer = math.max(0, math.min(1, a - (i - 1)))   -- the first copy to 100%, the second above it
+            t:SetAlpha(layer)
+            t:SetShown(layer > 0)
+        end
     end
     caps:Show()                 -- Neutral characters (pandaren before choosing) get no caps from Blizzard
 end
@@ -179,6 +184,22 @@ end)
 SLASH_HOMELAND1 = "/homeland"
 SlashCmdList.HOMELAND = function(msg)
     msg = (msg or ""):lower()
+    if msg == "debug" then  -- 11 Nov: what sets the caps' opacity in game (the fix for Stillwater's fade didn't take)
+        local function A(x, eff)
+            if not x then return "none" end
+            local ok, v = pcall(eff and x.GetEffectiveAlpha or x.GetAlpha, x)
+            return ok and v and ("%.2f"):format(v) or "?"
+        end
+        local caps = MainActionBar and MainActionBar.EndCaps
+        local left = caps and caps.LeftEndCap
+        print(("Homeland debug: on %s, version own-frame; holder %s eff %s shown %s; own left alpha %s shown %s"):format(
+            tostring(on), A(holder), A(holder, true), tostring(holder and holder:IsShown()), A(own.left),
+            tostring(own.left and own.left:IsShown())))
+        print(("Homeland debug: Blizzard left texture alpha %s; cap frame eff %s; MainActionBar alpha %s eff %s; "
+            .. "UIParent %s; capAlpha %s"):format(A(left and left.Texture), A(left, true), A(MainActionBar),
+            A(MainActionBar, true), A(UIParent), tostring(DB().capAlpha)))
+        return
+    end
     if msg == "off" then
         on = false
         Move(false)
@@ -215,7 +236,7 @@ SlashCmdList.HOMELAND = function(msg)
         print(("Homeland: minimap %s, %s, opacity %.2f, size %.2f. /homeland map square | nouveau | on | off | fade <0-1> | <size>")
             :format(DB().map == false and "off" or "on", STYLE[Style()].label, Alpha(), Size()))
     elseif msg:match("^caps%s+[%d%.]+$") then
-        DB().capAlpha = math.max(0, math.min(1, tonumber(msg:match("[%d%.]+$"))))
+        DB().capAlpha = math.max(0, math.min(2, tonumber(msg:match("[%d%.]+$"))))
         Apply()
         print(("Homeland: bar art opacity %.2f."):format(DB().capAlpha))
     elseif msg == "reset" then
@@ -318,7 +339,7 @@ if Minimap then
         local size = Slider(panel, -74, "Size")
         size:SetValueStep(0.05)
         local caps = Slider(panel, -114, "Bar art")                     -- the end caps, one setting for both styles
-        caps:SetMinMaxValues(0, 1)
+        caps:SetMinMaxValues(0, 2)                                    -- above 100% stacks a second copy
         caps:SetValueStep(0.05)
         local quiet = false                                           -- Refresh sets values without saving them
         alpha:SetScript("OnValueChanged", function(self, v)
