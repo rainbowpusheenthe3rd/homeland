@@ -19,9 +19,9 @@ New-Item -ItemType Junction -Path "<WoW folder>\_forever_\Interface\AddOns\Homel
 The bar end caps and the square minimap art are cut from AI-generated race concepts (MOSS-Image, Apache-2.0),
 by `tools/homeland_caps.py`. The art nouveau minimap frames are drawn in code (`tools/homeland_nouveau.py`).
 
-![The art nouveau minimap frame in game](docs/nouveau_ingame.png)
+![Night elf bar end caps in game](docs/caps_ingame.png)
 
-![The art nouveau frames, one per race palette](docs/nouveau_frames.png)
+![The bar end caps, one pair per race](docs/caps_races.png)
 
 ## Talks to
 
