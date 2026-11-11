@@ -50,38 +50,35 @@ lua.execute(f"local f = load([==[{SRC}]==], 'Homeland', 't', _G); f('Homeland')"
 lua.execute("frames[1].scripts.OnEvent(); named('HomelandMinimapButton').scripts.OnEvent()")
 m = lua.eval("mapframe()")
 close = lambda a, b: abs(a - b) < 1e-6
-# the square by default, smaller and at half opacity
-assert m.shown and close(m.alpha, 0.5) and close(m.w, 145) and m.tex.path.endswith("map_night_elf"), (m.alpha, m.w, m.tex.path)
+# the square by default, at the one opacity (100%)
+assert m.shown and close(m.alpha, 1) and close(m.w, 145) and m.tex.path.endswith("map_night_elf"), (m.alpha, m.w, m.tex.path)
 lua.execute("click()")
 p = lua.eval("named('HomelandPanel')")
-assert p.shown and close(p.alpha.cur, 0.5) and close(p.size.cur, 1.45) and close(p.size.min, 1.2)
-lua.execute("named('HomelandPanel').size:SetValue(1.62); named('HomelandPanel').alpha:SetValue(0.31)")
-assert close(m.w, 160) and close(m.alpha, 0.3), (m.w, m.alpha)         # snapped to 0.05 steps
-# the Art nouveau tab: its own defaults, and its size can't go under 1.6
+assert p.shown and close(p.opacity.cur, 1) and close(p.opacity.max, 1), "one slider, 0 to 100%"
+assert p.size is None and p.caps is None and p.alpha is None, "no other sliders"
+lua.execute("named('HomelandPanel').opacity:SetValue(0.31)")
+assert close(m.alpha, 0.3) and close(lua.eval("HomelandDB.opacity"), 0.3), m.alpha     # snapped to 0.05 steps
+# the Art nouveau tab keeps the same opacity; size comes from its own default
 lua.execute("tab(2)")
-assert m.tex.path.endswith("nouveau_night_elf") and close(m.alpha, 1) and close(m.w, 170), (m.tex.path, m.alpha, m.w)
-assert close(p.size.min, 1.6) and close(p.size.cur, 1.7) and close(p.alpha.cur, 1)
-lua.execute("named('HomelandPanel').size:SetValue(1.0)")
-assert close(m.w, 160), m.w
-# back to the square: its settings were kept
+assert m.tex.path.endswith("nouveau_night_elf") and close(m.alpha, 0.3) and close(m.w, 170), (m.tex.path, m.alpha, m.w)
 lua.execute("tab(1)")
-assert m.tex.path.endswith("map_night_elf") and close(m.w, 160) and close(m.alpha, 0.3), (m.w, m.alpha)
+assert m.tex.path.endswith("map_night_elf") and close(m.w, 145)
 # opacity 0 turns it off, raising it brings it back
-lua.execute("named('HomelandPanel').alpha:SetValue(0)")
+lua.execute("named('HomelandPanel').opacity:SetValue(0)")
 assert not m.shown
-lua.execute("named('HomelandPanel').alpha:SetValue(0.6)")
+lua.execute("named('HomelandPanel').opacity:SetValue(0.6)")
 assert m.shown and close(m.alpha, 0.6)
-# slash commands
+# slash commands: style, size (clamped per style), opacity
 lua.execute("SlashCmdList.HOMELAND('map nouveau')")
-assert m.tex.path.endswith("nouveau_night_elf") and close(m.w, 160)
+assert m.tex.path.endswith("nouveau_night_elf")
 lua.execute("SlashCmdList.HOMELAND('map square'); SlashCmdList.HOMELAND('map 9')")
 assert close(m.w, 220), m.w                                            # clamped to the square's 2.2
+lua.execute("SlashCmdList.HOMELAND('opacity 0.7')")
+assert close(m.alpha, 0.7)
 lua.execute("click()")
 assert not p.shown
 assert lua.eval("UISpecialFrames[1]") == "HomelandPanel"
-# the bar art: its own opacity, from the panel's slider or /homeland caps, kept when the bar fades
-lua.execute("named('HomelandPanel').caps:SetValue(0.42)")
-assert close(lua.eval("HomelandDB.capAlpha"), 0.4)
-lua.execute("SlashCmdList.HOMELAND('caps 0.7')")
-assert close(lua.eval("HomelandDB.capAlpha"), 0.7)
+# an old saved capAlpha seeds the one opacity, capped at 1
+lua.execute("HomelandDB = { capAlpha = 1.5 }; SlashCmdList.HOMELAND('map on')")
+assert close(m.alpha, 1) and close(lua.eval("HomelandDB.opacity"), 1)
 print("map and panel checks pass")

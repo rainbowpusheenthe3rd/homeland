@@ -82,12 +82,11 @@ lua.execute("SlashCmdList.HOMELAND('corner')")
 assert pt("Left") == (0, 0), "corner keeps its own offset"
 lua.execute("SlashCmdList.HOMELAND('hug'); SlashCmdList.HOMELAND('reset')")
 assert pt("Left") == (-31, 6), pt("Left")
-# above 100% a second copy stacks on top at the extra opacity; at 100% it's hidden
-copies = lambda: [(x.alpha, x.shown) for x in lua.eval("frames[2].texs").values() if "_left" in (x.path or "")]
-lua.execute("SlashCmdList.HOMELAND('caps 1.5')")
-assert copies() == [(1, True), (0.5, True)], copies()
-lua.execute("SlashCmdList.HOMELAND('caps 1')")
-assert copies() == [(1, True), (0, False)], copies()
+# one opacity, 0 to 1, from /homeland opacity (or the old /homeland caps)
+lua.execute("SlashCmdList.HOMELAND('opacity 0.5')")
+assert lua.eval("own('left').alpha") == 0.5 and lua.eval("own('right').alpha") == 0.5
 lua.execute("SlashCmdList.HOMELAND('caps 9')")
-assert copies() == [(1, True), (1, True)], "capped at 200%"
+assert lua.eval("own('left').alpha") == 1, "capped at 100%"
+lua.execute("SlashCmdList.HOMELAND('opacity 0')")
+assert not lua.eval("own('left').shown"), "0 hides the caps"
 print("all checks pass;", list(lua.eval("log").values()))
