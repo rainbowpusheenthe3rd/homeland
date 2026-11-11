@@ -8,6 +8,12 @@ The left cap is the concept's bottom-left corner (where its plants root and clim
 at the end caps' 154 x 95 aspect. The dark background is keyed out to alpha by its distance from the corner
 colour, so only the plants show. Each TGA is 256 x 256 with the cap in its top 158 rows (the addon sets the
 texture coordinates to match).
+
+The key (11 Nov 2026): the plants are painted dark on a dark ground, so a gentle key left the leaves half
+transparent and they read as faded over bright ground. A steeper key makes the plant body solid with a soft rim
+(night elf: 73% of the body fully opaque, up from 57%; a floor under 13 picks up the concept's paper grain), the
+background's share is taken back out of the rim's colour (un-mixing), and a modest saturation lift helps the paint
+read in game over anything from night to bright grass.
 """
 import sys
 from pathlib import Path
@@ -23,6 +29,35 @@ CROP_W = 0.46                        # fraction of the concept's width taken for
 INSET = {"Night_Elf": 0.12}       # step in from the outer and bottom edges, past the concept's printed border
 TAPER = 0.40                         # the inner end fades over this fraction of the cap, so stems thin out
                                      # before the bar instead of running onto its buttons
+KEY_FLOOR = 14                       # colour distance from the ground (0-441) below which a pixel is ground
+KEY_WIDTH = 14                       # ... and over which it ramps to fully opaque
+SATURATION = 1.25                    # colour lift after un-mixing
+UNMIX_MIN = 0.05                     # alpha floor when un-mixing, so near-transparent rims don't blow out
+CORNER = 24                          # the ground colour is the median of this many pixels in each top corner
+
+
+def ground(img):
+    """The concept's background colour: the median of its two top corners."""
+    return np.median(np.concatenate([img[:CORNER, :CORNER].reshape(-1, 3),
+                                     img[:CORNER, -CORNER:].reshape(-1, 3)]), axis=0)
+
+
+def key(region, bg):
+    """Key a region of a concept against its ground colour.
+
+    Args:
+        region: H x W x 3 float RGB (0-255).
+        bg: the ground colour, 3 floats.
+
+    Returns:
+        (rgb, alpha): the un-mixed, saturation-lifted colour (0-255) and alpha (0-1).
+    """
+    alpha = np.clip((np.linalg.norm(region - bg, axis=-1) - KEY_FLOOR) / KEY_WIDTH, 0, 1)
+    a = np.maximum(alpha, UNMIX_MIN)[..., None]
+    rgb = np.clip((region - (1 - a) * bg) / a, 0, 255)          # c = a*fg + (1-a)*bg  ->  fg
+    grey = rgb.mean(axis=-1, keepdims=True)
+    rgb = np.clip(grey + (rgb - grey) * SATURATION, 0, 255)
+    return rgb, alpha
 
 
 def cap(img, side, inset=0.06):
@@ -33,9 +68,7 @@ def cap(img, side, inset=0.06):
     m = int(n * inset)
     y1 = img.shape[0] - m
     crop = img[y1 - ch:y1, m:m + cw] if side == "left" else img[y1 - ch:y1, n - m - cw:n - m]
-    bg = np.median(np.concatenate([img[:24, :24].reshape(-1, 3), img[:24, -24:].reshape(-1, 3)]), axis=0)
-    dist = np.linalg.norm(crop - bg, axis=-1)
-    alpha = np.clip((dist - 18) / 50, 0, 1)
+    crop, alpha = key(crop, ground(img))
     edge = np.ones_like(alpha)
     t = int(cw * TAPER)                          # inner end: a long smoothstep fade
     s = np.linspace(1, 0, t)
@@ -83,13 +116,12 @@ def main(src, preview=None):
             pair.append(im.crop((0, 0, W, H)))
         tiles.append(pair)
         # the whole square, for round the minimap: keyed the same way, edges faded so nothing is ruled
-        bg = np.median(np.concatenate([img[:24, :24].reshape(-1, 3), img[:24, -24:].reshape(-1, 3)]), axis=0)
-        alpha = np.clip((np.linalg.norm(img - bg, axis=-1) - 18) / 50, 0, 1)
+        rgb, alpha = key(img, ground(img))
         n = img.shape[0]
         i = np.arange(n)
         e = np.minimum(np.minimum(i, i[::-1])[None, :], np.minimum(i, i[::-1])[:, None])   # distance to an edge
         alpha = alpha * np.clip(e / 12, 0, 1)
-        sq = Image.fromarray((np.dstack([img / 255, alpha]) * 255).astype("uint8"), "RGBA").resize((512, 512),
+        sq = Image.fromarray((np.dstack([rgb / 255, alpha]) * 255).astype("uint8"), "RGBA").resize((512, 512),
                                                                                                    Image.LANCZOS)
         write_tga(sq, OUT / f"map_{race.lower()}.tga")
     if preview:   # each race: left cap, a stand-in bar, right cap, on a mid-grey like the game's HUD
