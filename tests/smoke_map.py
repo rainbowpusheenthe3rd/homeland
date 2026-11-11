@@ -12,7 +12,7 @@ local noop = function() end
 local function stub(t)
   return setmetatable(t, { __index = function(_, k) if k:match("^%u") then return noop end end })
 end
-MainActionBar = { EndCaps = stub({ LeftEndCap = { Texture = stub({}) }, RightEndCap = { Texture = stub({}) } }) }
+MainActionBar = { EndCaps = stub({ LeftEndCap = stub({ Texture = stub({}) }), RightEndCap = stub({ Texture = stub({}) }) }) }
 function MainActionBar:UpdateEndCaps() end
 function hooksecurefunc() end
 function UnitRace() return "Night Elf", "NightElf" end

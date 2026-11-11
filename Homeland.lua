@@ -35,6 +35,22 @@ local function Offset()
     return o[1], o[2]
 end
 
+-- The cap art is drawn on Homeland's own frame, not on Blizzard's cap textures: anything that fades the action bar
+-- (Stillwater) would fade those too, and SetIgnoreParentAlpha didn't stop it in game (11 Nov 2026: caps at 100%
+-- still dimmed with Stillwater's fade). Blizzard's own cap textures are kept at 0 opacity while Homeland is on.
+local holder, own = nil, {}
+local function Own(side, cap)
+    if not holder then
+        holder = CreateFrame("Frame", nil, UIParent)
+        holder:SetAllPoints(UIParent)
+    end
+    holder:SetFrameStrata(cap:GetFrameStrata())
+    holder:SetFrameLevel(cap:GetFrameLevel())
+    holder:Show()
+    own[side] = own[side] or holder:CreateTexture(nil, "OVERLAY")
+    return own[side]
+end
+
 local function Apply()
     local caps = MainActionBar and MainActionBar.EndCaps
     if not caps or not caps.LeftEndCap then return end
@@ -43,7 +59,8 @@ local function Apply()
     if not name or not on then return end
     local out, up = Offset()
     for side, cap in pairs({ left = caps.LeftEndCap, right = caps.RightEndCap }) do
-        local t = cap.Texture
+        cap.Texture:SetAlpha(0)
+        local t = Own(side, cap)
         t:SetTexture(DIR .. "cap_" .. name .. "_" .. side .. (Mode() == "hug" and "_hug" or ""))
         t:SetTexCoord(0, 1, 0, FILL)
         t:ClearAllPoints()
@@ -51,8 +68,8 @@ local function Apply()
         t:SetPoint("TOPLEFT", cap, "TOPLEFT", x, up)
         t:SetPoint("BOTTOMRIGHT", cap, "BOTTOMRIGHT", x, up)
         -- the caps keep their own opacity (/homeland caps, the panel's Bar art slider), whatever fades the bar
-        if t.SetIgnoreParentAlpha then t:SetIgnoreParentAlpha(true) end
         t:SetAlpha(DB().capAlpha or 1)
+        t:Show()
     end
     caps:Show()                 -- Neutral characters (pandaren before choosing) get no caps from Blizzard
 end
@@ -143,7 +160,7 @@ local function Move(show)
     for side, cap in pairs({ left = caps.LeftEndCap, right = caps.RightEndCap }) do
         handles[side] = handles[side] or Handle(side)
         handles[side]:ClearAllPoints()
-        handles[side]:SetAllPoints(cap.Texture)     -- follows the art as it moves
+        handles[side]:SetAllPoints(own[side] or cap.Texture)     -- follows the art as it moves
         handles[side]:SetShown(show)
     end
 end
@@ -166,10 +183,10 @@ SlashCmdList.HOMELAND = function(msg)
         on = false
         Move(false)
         Map()
+        for _, t in pairs(own) do t:Hide() end
         for _, cap in pairs({ MainActionBar.EndCaps.LeftEndCap, MainActionBar.EndCaps.RightEndCap }) do
             cap.Texture:ClearAllPoints()
             cap.Texture:SetAllPoints(cap)
-            if cap.Texture.SetIgnoreParentAlpha then cap.Texture:SetIgnoreParentAlpha(false) end
             cap.Texture:SetAlpha(1)
         end
         MainActionBar:UpdateEndCaps(MainActionBar.hideBarArt)   -- Blizzard puts its own art back

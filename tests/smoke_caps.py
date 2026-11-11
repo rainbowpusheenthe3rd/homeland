@@ -1,5 +1,6 @@
-r"""Smoke-test Homeland.lua with stub frames: caps retextured on login, re-applied after Blizzard's UpdateEndCaps,
-off/on, hug/corner, and a drag in move mode that shifts both caps mirrored."""
+r"""Smoke-test Homeland.lua with stub frames: caps drawn on Homeland's own frame on login (Blizzard's cap textures
+kept at 0 opacity, so whatever fades the bar can't dim them), re-applied after Blizzard's UpdateEndCaps, off/on,
+hug/corner, and a drag in move mode that shifts both caps mirrored."""
 from pathlib import Path
 
 import lupa
@@ -15,9 +16,11 @@ end
 local function tex(name)
   return stub({ name = name, points = {},
     SetTexture = function(s, p) s.path = p end, SetAtlas = function(s, a) s.path = "atlas:" .. a end,
+    SetAlpha = function(s, a) s.alpha = a end, Show = function(s) s.shown = true end, Hide = function(s) s.shown = false end,
     SetPoint = function(s, p, rel, rp, x, y) s.points[p] = { x, y } end, ClearAllPoints = function(s) s.points = {} end })
 end
-MainActionBar = { EndCaps = stub({ LeftEndCap = { Texture = tex("L") }, RightEndCap = { Texture = tex("R") } }) }
+local function cap(t) t.GetFrameStrata = function() return "MEDIUM" end; t.GetFrameLevel = function() return 3 end; return t end
+MainActionBar = { EndCaps = stub({ LeftEndCap = cap({ Texture = tex("L") }), RightEndCap = cap({ Texture = tex("R") }) }) }
 function MainActionBar:UpdateEndCaps()
   self.EndCaps.LeftEndCap.Texture:SetAtlas("ui-hud-actionbar-gryphon-left")
   self.EndCaps.RightEndCap.Texture:SetAtlas("ui-hud-actionbar-gryphon-right")
@@ -34,32 +37,42 @@ function CreateFrame()
   local fr = stub({ scripts = {}, shown = false,
     SetScript = function(s, k, f) s.scripts[k] = f end, SetShown = function(s, v) s.shown = v end,
     IsShown = function(s) return s.shown end, GetEffectiveScale = function() return 1 end,
-    CreateTexture = function() return stub({}) end, CreateFontString = function() return stub({}) end })
+    CreateTexture = function(s) local t = tex("own"); s.texs = s.texs or {}; s.texs[#s.texs + 1] = t; return t end,
+    CreateFontString = function() return stub({}) end })
   frames[#frames + 1] = fr
   return fr
 end
 function fire() frames[1].scripts.OnEvent() end
+-- Homeland's own cap texture for a side ("left"/"right"): frames[2] is the holder it makes on the first apply
+function own(side)
+  for _, t in ipairs(frames[2].texs or {}) do if t.path and t.path:find("_" .. side) then return t end end
+end
 """)
 lua.execute(f"local f = load([==[{SRC}]==], 'Homeland', 't', _G); f('Homeland')")
-L = lambda: lua.eval("MainActionBar.EndCaps.LeftEndCap.Texture.path")
-pt = lambda side: tuple(lua.eval(f"MainActionBar.EndCaps.{side}EndCap.Texture.points.TOPLEFT").values())
+L = lambda: lua.eval("own('left').path")
+B = lambda: lua.eval("MainActionBar.EndCaps.LeftEndCap.Texture")
+pt = lambda side: tuple(lua.eval(f"own('{side.lower()}').points.TOPLEFT").values())
 lua.eval("fire")()
+assert B().alpha == 0, "Blizzard's cap texture is hidden under ours"
+assert lua.eval("own('left').shown") and lua.eval("own('left').alpha") == 1, "ours shows at its own opacity"
 assert L() == r"Interface\AddOns\Homeland\cap_night_elf_left_hug", L()   # hug is the default
 assert pt("Left") == (-31, 6), pt("Left")
 lua.execute("MainActionBar:UpdateEndCaps()")
 assert L().endswith("cap_night_elf_left_hug"), "not re-applied after Blizzard's update: " + L()
 lua.execute("SlashCmdList.HOMELAND('off')")
-assert L() == "atlas:ui-hud-actionbar-gryphon-left", L()
+assert B().path == "atlas:ui-hud-actionbar-gryphon-left" and B().alpha == 1, (B().path, B().alpha)
+assert not lua.eval("own('left').shown"), "ours is hidden when off"
 lua.execute("SlashCmdList.HOMELAND('on')")
 lua.execute("SlashCmdList.HOMELAND('hug')")
+assert lua.eval("own('left').shown") and B().alpha == 0
 assert L().endswith("cap_night_elf_left_hug"), L()
 assert pt("Left") == (-31, 6) and pt("Right") == (31, 6), (pt("Left"), pt("Right"))
 # drag the left handle 20 px left (outwards) and 5 px up: both caps move out 20, up 5
 lua.execute("SlashCmdList.HOMELAND('move')")
-h = lua.eval("frames[2]")
+h = lua.eval("frames[3]")
 assert h.shown
-lua.execute("frames[2].scripts.OnMouseDown(frames[2]); cursor = { 480, 305 }; frames[2].scripts.OnUpdate(frames[2]); frames[2].scripts.OnMouseUp(frames[2])")
-# handles are made in pairs() order, so frames[2] may be either side: dragging left is outwards for the left
+lua.execute("frames[3].scripts.OnMouseDown(frames[3]); cursor = { 480, 305 }; frames[3].scripts.OnUpdate(frames[3]); frames[3].scripts.OnMouseUp(frames[3])")
+# handles are made in pairs() order, so frames[3] may be either side: dragging left is outwards for the left
 # cap (31 + 20) and inwards for the right cap (31 - 20); either way both caps move, mirrored
 out = tuple(lua.eval("HomelandDB.offset.hug").values())
 assert out in ((51, 11), (11, 11)), out
