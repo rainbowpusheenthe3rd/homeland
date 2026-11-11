@@ -23,6 +23,8 @@ by `tools/homeland_caps.py`. The art nouveau minimap frames are drawn in code (`
 
 ![The bar end caps, one pair per race](docs/caps_races.png)
 
+![The minimap frames, one per race](docs/map_frames.png)
+
 ## Talks to
 
 Nothing; works alone. Stillwater uses the same race palette.
