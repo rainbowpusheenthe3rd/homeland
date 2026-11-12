@@ -29,6 +29,8 @@ end
 function hooksecurefunc(t, k, f) local o = t[k]; t[k] = function(...) local r = o(...); f(...); return r end end
 function UnitRace() return "Night Elf", "NightElf" end
 SlashCmdList = {}
+tickers = {}
+C_Timer = { NewTicker = function(_, f) tickers[#tickers + 1] = f end, After = function(_, f) f() end }
 UIParent = {}
 cursor = { 500, 300 }
 function GetCursorPosition() return cursor[1], cursor[2] end

@@ -8,7 +8,8 @@ after it with hooksecurefunc. No protected frame is touched, so it is safe in co
 
 The cap art is drawn on Homeland's own frame, not on Blizzard's cap textures (kept at 0 opacity while Homeland is
 on), so nothing that fades the action bar (Stillwater) fades it. One opacity, 0 to 100%, sets all of Homeland's
-art: the caps and the minimap frame (11 Nov 2026).
+art: the caps and the minimap frame (11 Nov 2026). The minimap's coordinates are set into the bottom of the frame as
+an engraved tab, black with a rim in the race's colour; the tab fades with the frame, the white numbers don't.
 
 Placement: each mode ("hug", the default: heavy end against the bar; "corner": heavy end at the screen edge) keeps
 its own offset, in pixels outwards from the bar and upwards, mirrored for the two sides. /homeland move shows a
@@ -36,10 +37,26 @@ local HANDLE_COLOUR = { 0.3, 0.8, 0.4, 0.25 }               -- /homeland move's 
 -- centre is about 60% of their width, so 1.45 tucks the art in close; the nouveau frame is drawn for exactly 1.7
 -- (FIT in tools/homeland_nouveau.py) and can't go under 1.6 or its stems would cross onto the map.
 local STYLE = {
-    painted = { label = "Square", size = 1.45, min = 1.2, max = 2.2, dim = 0.8 },
+    painted = { label = "Square", size = 1.4, min = 1.2, max = 2.2, dim = 0.8 },
     nouveau = { label = "Art nouveau", size = 1.7, min = 1.6, max = 2.2, dim = 1 },
 }
 local STYLES = { "painted", "nouveau" }  -- tab order
+
+-- the coordinates' tab: an engraved plaque set into the bottom of the frame, like the label on a good photo frame.
+-- The plaque (black, rimmed in the race's colour) fades with the frame's opacity; the numbers stay full strength.
+local RACE_COLOUR = {               -- each race's main flower colour (tools/homeland_nouveau.py PALETTE), 0-255
+    NightElf = { 240, 236, 255 }, Human = { 244, 196, 206 }, Dwarf = { 196, 136, 206 }, Gnome = { 124, 172, 240 },
+    Orc = { 244, 130, 70 }, Scourge = { 156, 116, 186 }, Tauren = { 244, 212, 96 }, Troll = { 232, 112, 200 },
+}
+local COORDS_PATTERN = "^%s*%-?%d+%.%d+,%s*%-?%d+%.%d+%s*$"   -- "37.6, 73.4"
+local COORDS_EVERY = 1              -- seconds between checks: find the text, keep it on the tab, fit the tab to it
+local TAB_FILL = { 0, 0, 0, 0.85 }  -- the plaque
+local TAB_RIM = 1                   -- its race-coloured rim, pixels ...
+local TAB_INLAY = 0.35              -- ... and a fainter inlay line just inside it, as an engraved border
+local TAB_PAD_X, TAB_PAD_Y = 8, 3   -- plaque round the numbers, pixels
+local TAB_DROP = 0.5                -- how far down the frame's margin below the map the tab sits (0 = map edge)
+local COORDS_TEXT = { 1, 1, 1 }     -- white numbers ...
+local COORDS_SHADOW = { 1, -1 }     -- ... with a 1 px black shadow
 
 -- minimap button and its panel
 local BUTTON_ICON = "Interface\\Icons\\INV_Misc_Flower_02"              -- Peacebloom, the game's own icon
@@ -166,9 +183,74 @@ local function Map()
     map:SetShown(on and DB().map ~= false and Opacity() > 0)
 end
 
+---------------------------------------------------------------------------------------------- the coordinates' tab
+-- The minimap's coordinate text isn't Homeland's (nor in Blizzard's Camelot minimap code), so it's found by its look
+-- under the minimap cluster, then anchored to the tab. The tab is a child of the frame, so it takes the frame's
+-- opacity; the text keeps its own parent, so it stays at full strength.
+local coords, tab
+local function FindCoords(frame, depth)
+    if not frame or depth > 6 or frame == map then return nil end
+    for _, r in ipairs({ frame:GetRegions() }) do
+        if r.GetObjectType and r:GetObjectType() == "FontString" then
+            local t = r:GetText()
+            if type(t) == "string" and not (issecretvalue and issecretvalue(t)) and t:match(COORDS_PATTERN) then return r end
+        end
+    end
+    for _, c in ipairs({ frame:GetChildren() }) do
+        local found = FindCoords(c, depth + 1)
+        if found then return found end
+    end
+end
+
+local function Tab()
+    if not map then return end
+    coords = coords or FindCoords(_G.MinimapCluster, 0) or FindCoords(Minimap, 0)
+    if not coords then return end
+    local _, file = UnitRace("player")
+    local c = RACE_COLOUR[file or ""] or { 255, 255, 255 }
+    local r, g, b = c[1] / 255, c[2] / 255, c[3] / 255
+    if not tab then
+        tab = CreateFrame("Frame", nil, map)
+        local function Tex(layer, sub) return tab:CreateTexture(nil, layer, nil, sub) end
+        tab.fill = Tex("BACKGROUND", 0)
+        tab.fill:SetAllPoints()
+        tab.rim, tab.inlay = {}, {}
+        for i, e in ipairs({ { "TOPLEFT", "TOPRIGHT", "h" }, { "BOTTOMLEFT", "BOTTOMRIGHT", "h" },
+                             { "TOPLEFT", "BOTTOMLEFT", "w" }, { "TOPRIGHT", "BOTTOMRIGHT", "w" } }) do
+            local inset = { TOPLEFT = { 1, -1 }, TOPRIGHT = { -1, -1 }, BOTTOMLEFT = { 1, 1 }, BOTTOMRIGHT = { -1, 1 } }
+            for k, list in ipairs({ tab.rim, tab.inlay }) do
+                local t = Tex("BORDER", k)
+                local d = (k - 1) * (TAB_RIM + 1)        -- the inlay sits one pixel inside the rim
+                t:SetPoint(e[1], tab, e[1], inset[e[1]][1] * d, inset[e[1]][2] * d)
+                t:SetPoint(e[2], tab, e[2], inset[e[2]][1] * d, inset[e[2]][2] * d)
+                if e[3] == "h" then t:SetHeight(TAB_RIM) else t:SetWidth(TAB_RIM) end
+                list[i] = t
+            end
+        end
+    end
+    tab.fill:SetColorTexture(TAB_FILL[1], TAB_FILL[2], TAB_FILL[3], TAB_FILL[4])
+    for _, t in ipairs(tab.rim) do t:SetColorTexture(r, g, b, 1) end
+    for _, t in ipairs(tab.inlay) do t:SetColorTexture(r, g, b, TAB_INLAY) end
+    local w = Minimap:GetWidth()
+    local margin = (Size() * w - w) / 2                 -- the frame's art below the map
+    tab:SetSize((coords:GetStringWidth() or 40) + 2 * TAB_PAD_X, (coords:GetStringHeight() or 12) + 2 * TAB_PAD_Y)
+    tab:ClearAllPoints()
+    tab:SetPoint("CENTER", Minimap, "BOTTOM", 0, -margin * TAB_DROP)
+    tab:SetShown(map:IsShown())
+    local _, rel = coords:GetPoint(1)
+    if rel ~= tab then
+        coords:ClearAllPoints()
+        coords:SetPoint("CENTER", tab, "CENTER", 0, 0)
+    end
+    coords:SetTextColor(COORDS_TEXT[1], COORDS_TEXT[2], COORDS_TEXT[3])
+    coords:SetShadowColor(0, 0, 0, 1)
+    coords:SetShadowOffset(COORDS_SHADOW[1], COORDS_SHADOW[2])
+end
+
 local function Refresh()
     Apply()
     Map()
+    Tab()
 end
 
 ---------------------------------------------------------------------------------------------- placing the caps
@@ -223,6 +305,10 @@ f:SetScript("OnEvent", function()
         f.hooked = true
     end
     Refresh()
+    if not f.ticking then              -- the coordinates appear late and their width changes: keep the tab fitted
+        f.ticking = true
+        C_Timer.NewTicker(COORDS_EVERY, Tab)
+    end
 end)
 
 ---------------------------------------------------------------------------------------------- slash commands
@@ -247,7 +333,7 @@ SlashCmdList.HOMELAND = function(msg)
     elseif msg == "off" then
         on = false
         Move(false)
-        Map()
+        Map(); Tab()
         for _, t in pairs(own) do t:Hide() end
         for _, cap in pairs({ MainActionBar.EndCaps.LeftEndCap, MainActionBar.EndCaps.RightEndCap }) do
             cap.Texture:ClearAllPoints()
@@ -281,7 +367,7 @@ SlashCmdList.HOMELAND = function(msg)
         elseif tonumber(arg) then
             SetSize(tonumber(arg))
         end
-        Map()
+        Map(); Tab()
         print(("Homeland: minimap %s, %s, size %.2f. /homeland map square | nouveau | on | off | <size>")
             :format(DB().map == false and "off" or "on", STYLE[Style()].label, Size()))
     elseif msg == "reset" then
@@ -346,7 +432,7 @@ if Minimap then
             t.key = key
             t:SetScript("OnClick", function()
                 DB().mapStyle = key
-                Map()
+                Map(); Tab()
                 panel.Refresh()
             end)
             panel.tabs[i] = t
@@ -392,7 +478,7 @@ if Minimap then
             self.readout:SetText(("%.2fx the map"):format(v))
             if quiet then return end
             SetSize(v)
-            Map()
+            Map(); Tab()
         end)
         function panel.Refresh()
             for _, t in ipairs(panel.tabs) do
