@@ -49,14 +49,16 @@ local BUTTON_REST = 0.5             -- its opacity until you point at it
 local BUTTON_ANGLE = 200            -- default place round the minimap's edge, degrees
 local BUTTON_GAP = 6                -- outside the minimap's edge, pixels
 local BUTTON_LEVEL = 8              -- frame levels above the minimap
-local PANEL_W, PANEL_H = 210, 78
+local PANEL_W, PANEL_H = 210, 118
 local PANEL_BG = { 0.05, 0.04, 0.08, 0.88 }
 local LAV = { 0.77, 0.73, 0.89 }    -- the panel's lavender: top line, tabs, slider track
 local LINE_ALPHA = 0.8              -- the one thin line along the panel's top
 local TAB_W, TAB_H, TAB_X, TAB_Y, TAB_GAP = 95, 20, 8, -6, 4
 local TAB_FILL = { on = 0.28, off = 0.06 }                      -- lavender behind the chosen / other tab
 local TAB_TEXT = { on = { 1, 0.95, 1 }, off = { 0.6, 0.58, 0.68 } }
-local SLIDER_X, SLIDER_Y, SLIDER_H, SLIDER_DROP = 10, -34, 16, 14  -- label row; the slider sits 14 below it
+local SLIDER_X, SLIDER_Y, SLIDER_H, SLIDER_DROP = 10, -34, 16, 14  -- first label row; each slider sits 14 below its label
+local SLIDER_ROW = 40               -- from one slider row to the next
+local SIZE_STEP = 0.05              -- the size slider's step, in multiples of the map's width
 local TRACK_ALPHA, TRACK_H = 0.35, 2
 local PANEL_GAP = 4                 -- between the button and the panel
 local SLIDER_THUMB = "Interface\\Buttons\\UI-SliderBar-Button-Horizontal"
@@ -296,7 +298,7 @@ end
 
 ---------------------------------------------------------------------------------------------- minimap button
 -- In Wayfinder's style: faint until you point at it, drag to move it round the edge. Click opens a small panel:
--- Square / Art nouveau tabs and one Opacity slider; Escape or another click closes it.
+-- Square / Art nouveau tabs, Opacity and Size; Escape or another click closes it.
 if Minimap then
     local b = CreateFrame("Button", "HomelandMinimapButton", Minimap)
     b:SetSize(BUTTON_SIZE, BUTTON_SIZE)
@@ -349,32 +351,48 @@ if Minimap then
             end)
             panel.tabs[i] = t
         end
-        -- the one slider: Opacity, 0 to 100%, for the caps and the minimap frame together
-        local name = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-        name:SetPoint("TOPLEFT", SLIDER_X, SLIDER_Y)
-        name:SetText("Opacity")
-        local readout = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-        readout:SetPoint("TOPRIGHT", -SLIDER_X, SLIDER_Y)
-        local sl = CreateFrame("Slider", nil, panel)
-        sl:SetOrientation("HORIZONTAL")
-        sl:SetSize(PANEL_W - 2 * (SLIDER_X + 2), SLIDER_H)
-        sl:SetPoint("TOP", 0, SLIDER_Y - SLIDER_DROP)
-        sl:SetThumbTexture(SLIDER_THUMB)
-        if sl.SetObeyStepOnDrag then sl:SetObeyStepOnDrag(true) end
-        local track = sl:CreateTexture(nil, "BACKGROUND")
-        track:SetColorTexture(LAV[1], LAV[2], LAV[3], TRACK_ALPHA)
-        track:SetHeight(TRACK_H)
-        track:SetPoint("LEFT")
-        track:SetPoint("RIGHT")
-        sl:SetMinMaxValues(0, 1)
-        sl:SetValueStep(OPACITY_STEP)
-        local quiet = false                                           -- Refresh sets the value without saving it
-        sl:SetScript("OnValueChanged", function(_, v)
+        -- two sliders: Opacity (0 to 100%, the caps and the minimap frame together) and Size (the minimap frame,
+        -- each style its own)
+        local function Slider(row, label)
+            local y = SLIDER_Y - (row - 1) * SLIDER_ROW
+            local name = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+            name:SetPoint("TOPLEFT", SLIDER_X, y)
+            name:SetText(label)
+            local readout = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+            readout:SetPoint("TOPRIGHT", -SLIDER_X, y)
+            local sl = CreateFrame("Slider", nil, panel)
+            sl:SetOrientation("HORIZONTAL")
+            sl:SetSize(PANEL_W - 2 * (SLIDER_X + 2), SLIDER_H)
+            sl:SetPoint("TOP", 0, y - SLIDER_DROP)
+            sl:SetThumbTexture(SLIDER_THUMB)
+            if sl.SetObeyStepOnDrag then sl:SetObeyStepOnDrag(true) end
+            local track = sl:CreateTexture(nil, "BACKGROUND")
+            track:SetColorTexture(LAV[1], LAV[2], LAV[3], TRACK_ALPHA)
+            track:SetHeight(TRACK_H)
+            track:SetPoint("LEFT")
+            track:SetPoint("RIGHT")
+            sl.readout = readout
+            return sl
+        end
+        local quiet = false                                           -- Refresh sets values without saving them
+        local opacity = Slider(1, "Opacity")
+        opacity:SetMinMaxValues(0, 1)
+        opacity:SetValueStep(OPACITY_STEP)
+        opacity:SetScript("OnValueChanged", function(self, v)
             v = math.floor(v / OPACITY_STEP + 0.5) * OPACITY_STEP
-            readout:SetText(("%d%%"):format(math.floor(v * 100 + 0.5)))
+            self.readout:SetText(("%d%%"):format(math.floor(v * 100 + 0.5)))
             if quiet then return end
             SetOpacity(v)
             Refresh()
+        end)
+        local size = Slider(2, "Size")
+        size:SetValueStep(SIZE_STEP)
+        size:SetScript("OnValueChanged", function(self, v)
+            v = math.floor(v / SIZE_STEP + 0.5) * SIZE_STEP
+            self.readout:SetText(("%.2fx the map"):format(v))
+            if quiet then return end
+            SetSize(v)
+            Map()
         end)
         function panel.Refresh()
             for _, t in ipairs(panel.tabs) do
@@ -384,10 +402,13 @@ if Minimap then
                 t.text:SetTextColor(TAB_TEXT[k][1], TAB_TEXT[k][2], TAB_TEXT[k][3])
             end
             quiet = true
-            sl:SetValue(Opacity())
+            opacity:SetValue(Opacity())
+            local st = STYLE[Style()]
+            size:SetMinMaxValues(st.min, st.max)
+            size:SetValue(Size())
             quiet = false
         end
-        panel.opacity = sl
+        panel.opacity, panel.size = opacity, size
         tinsert(UISpecialFrames, "HomelandPanel")                      -- Escape closes it
         panel:Hide()
         return panel
@@ -397,7 +418,7 @@ if Minimap then
         self:SetAlpha(1)
         GameTooltip:SetOwner(self, "ANCHOR_LEFT")
         GameTooltip:AddLine("Homeland")
-        GameTooltip:AddLine("Click: map style and opacity", 1, 1, 1)
+        GameTooltip:AddLine("Click: map style, opacity and size", 1, 1, 1)
         GameTooltip:AddLine("Drag: move this button", 0.7, 0.7, 0.7)
         GameTooltip:Show()
     end)

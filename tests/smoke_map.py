@@ -54,13 +54,20 @@ close = lambda a, b: abs(a - b) < 1e-6
 assert m.shown and close(m.alpha, 1) and close(m.w, 145) and m.tex.path.endswith("map_night_elf"), (m.alpha, m.w, m.tex.path)
 lua.execute("click()")
 p = lua.eval("named('HomelandPanel')")
-assert p.shown and close(p.opacity.cur, 1) and close(p.opacity.max, 1), "one slider, 0 to 100%"
-assert p.size is None and p.caps is None and p.alpha is None, "no other sliders"
+assert p.shown and close(p.opacity.cur, 1) and close(p.opacity.max, 1), "opacity, 0 to 100%"
+assert close(p.size.cur, 1.45) and close(p.size.min, 1.2) and close(p.size.max, 2.2), "size, the square's range"
+assert p.caps is None and p.alpha is None, "no other sliders"
+lua.execute("named('HomelandPanel').size:SetValue(1.62)")
+assert close(m.w, 160) and close(lua.eval("HomelandDB.style.painted.size"), 1.6), m.w   # snapped to 0.05 steps
+lua.execute("named('HomelandPanel').size:SetValue(1.45)")
 lua.execute("named('HomelandPanel').opacity:SetValue(0.31)")
 assert close(m.alpha, 0.3) and close(lua.eval("HomelandDB.opacity"), 0.3), m.alpha     # snapped to 0.05 steps
 # the Art nouveau tab keeps the same opacity; size comes from its own default
 lua.execute("tab(2)")
 assert m.tex.path.endswith("nouveau_night_elf") and close(m.alpha, 0.3) and close(m.w, 170), (m.tex.path, m.alpha, m.w)
+assert close(p.size.min, 1.6) and close(p.size.cur, 1.7), "the nouveau frame's own range and size"
+lua.execute("named('HomelandPanel').size:SetValue(1.0)")
+assert close(m.w, 160), m.w                                            # can't go under 1.6
 lua.execute("tab(1)")
 assert m.tex.path.endswith("map_night_elf") and close(m.w, 145)
 # opacity 0 turns it off, raising it brings it back
