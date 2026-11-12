@@ -1,6 +1,15 @@
 # Homeland
 
-Trial: your race's homeland plants in place of the gryphons or wyverns at the ends of the main action bar. /homeland off|on
+Your race's homeland plants in place of the gryphons or wyverns at the ends of the main action bar, and a frame of
+the same plants round the minimap.
+
+## Use
+
+- **Minimap button:** opens a small panel: Square or Art nouveau frame, Opacity (0-100%, all of Homeland's art) and Size.
+- `/homeland hug | corner`: the caps' heavy end against the bar (the default) or at the screen edge.
+- `/homeland move`: drag handles over the caps; again to finish. `/homeland reset` puts them back.
+- `/homeland map square | nouveau | on | off | <size>`: the minimap frame.
+- `/homeland off | on`: Blizzard's art back, or Homeland's.
 
 ## Install
 

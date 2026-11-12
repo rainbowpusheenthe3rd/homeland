@@ -2,6 +2,6 @@
 ## Title: Homeland
 ## Version: 0.1.0
 ## SavedVariables: HomelandDB
-## Notes: Trial: your race's homeland plants in place of the gryphons or wyverns at the ends of the main action bar. /homeland off|on
+## Notes: Your race's homeland plants at the ends of the main action bar and round the minimap. /homeland
 
 Homeland.lua
