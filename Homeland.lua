@@ -50,7 +50,7 @@ local RACE_COLOUR = {               -- each race's main flower colour (tools/hom
 }
 local COORDS_PATTERN = "^%s*%-?%d+%.%d+,%s*%-?%d+%.%d+%s*$"   -- "37.6, 73.4"
 local COORDS_EVERY = 1              -- seconds between checks: find the text, keep it on the tab, fit the tab to it
-local TAB_FILL = { 0, 0, 0, 0.85 }  -- the plaque
+local PLAQUE = { 0, 0, 0, 0.85 }    -- the plaque (not TAB_FILL: the panel's tabs use that name below)
 local TAB_RIM = 1                   -- its race-coloured rim, pixels ...
 local TAB_INLAY = 0.35              -- ... and a fainter inlay line just inside it, as an engraved border
 local TAB_PAD_X, TAB_PAD_Y = 8, 3   -- plaque round the numbers, pixels
@@ -228,7 +228,7 @@ local function Tab()
             end
         end
     end
-    tab.fill:SetColorTexture(TAB_FILL[1], TAB_FILL[2], TAB_FILL[3], TAB_FILL[4])
+    tab.fill:SetColorTexture(PLAQUE[1], PLAQUE[2], PLAQUE[3], PLAQUE[4])
     for _, t in ipairs(tab.rim) do t:SetColorTexture(r, g, b, 1) end
     for _, t in ipairs(tab.inlay) do t:SetColorTexture(r, g, b, TAB_INLAY) end
     local w = Minimap:GetWidth()

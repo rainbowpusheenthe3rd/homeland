@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.1 (2026-11-12)
+
+- Fixed: the coordinates' tab raised a Lua error every time it refreshed ("bad argument #1 to 'SetColorTexture'"),
+  which soon brought up the game's "large number of errors" warning. Its fill colour shared a name with the
+  settings panel's tab colours.
+
 ## 0.1.0 (2026-11-12)
 
 First release.

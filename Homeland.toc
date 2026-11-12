@@ -1,6 +1,6 @@
 ## Interface: 16001, 120105
 ## Title: Homeland
-## Version: 0.1.0
+## Version: 0.1.1
 ## SavedVariables: HomelandDB
 ## Notes: Your race's homeland plants at the ends of the main action bar and round the minimap. /homeland
 

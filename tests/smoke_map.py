@@ -46,7 +46,16 @@ function CreateFrame(kind, name, parent)
       if s.min then v = math.max(s.min, math.min(s.max, v)) end
       s.cur = v; if s.scripts.OnValueChanged then s.scripts.OnValueChanged(s, v) end end,
     CreateTexture = function() return stub({ SetVertexColor = function(t, r) t.dim = r end,
-                                             SetTexture = function(t, p) t.path = p end }) end,
+                                             SetTexture = function(t, p) t.path = p end,
+                                             -- like the game: four numbers, or it errors (12 Nov 2026: a nil
+                                             -- fill fired 1,040 errors from the coordinates ticker)
+                                             SetColorTexture = function(t, r, g, b, a)
+                                               local v = { r, g, b }
+                                               for i = 1, 3 do
+                                                 assert(type(v[i]) == "number", "bad argument #" .. i .. " to 'SetColorTexture'")
+                                               end
+                                               t.colour = { r, g, b, a }
+                                             end }) end,
     CreateFontString = function() return stub({ SetText = function(t, x) t.text = x end }) end })
   frames[#frames + 1] = fr
   return fr
@@ -104,4 +113,6 @@ tabf = lua.eval("coordsText.rel")
 assert lua.eval("coordsText.rel ~= nil and coordsText.rel.parentFrame == mapframe()"), "the numbers sit on a tab that is a child of the frame"
 assert lua.eval("coordsText.rel ~= nil and coordsText.rgb[1] == 1 and coordsText.rgb[3] == 1"), "white numbers"
 assert list(lua.eval("coordsText.shadow").values()) == [1, -1], "1 px shadow"
+for f in list(lua.eval("tickers").values()):   # the coordinates ticker runs clean
+    f()
 print("map and panel checks pass")
