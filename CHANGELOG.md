@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- The minimap button has its own icon instead of the game's Peacebloom: a plant from your race's own art (a dog
+  rose for humans, heather for dwarves, a moonflower for night elves, a glowing mushroom for gnomes, a desert
+  flower for orcs, pale mushrooms for the undead, a feather for tauren, an orchid for trolls). A race Homeland has
+  no art for gets the rose.
+- Homeland has an icon in the addon list too (the night elf moonflower).
+
 ## 0.1.1 (2026-11-12)
 
 - Fixed: the coordinates' tab raised a Lua error every time it refreshed ("bad argument #1 to 'SetColorTexture'"),

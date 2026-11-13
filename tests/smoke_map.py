@@ -45,7 +45,7 @@ function CreateFrame(kind, name, parent)
     SetValue = function(s, v)
       if s.min then v = math.max(s.min, math.min(s.max, v)) end
       s.cur = v; if s.scripts.OnValueChanged then s.scripts.OnValueChanged(s, v) end end,
-    CreateTexture = function() return stub({ SetVertexColor = function(t, r) t.dim = r end,
+    CreateTexture = function(s) s.texs = s.texs or {}; s.texs[#s.texs + 1] = stub({ SetVertexColor = function(t, r) t.dim = r end,
                                              SetTexture = function(t, p) t.path = p end,
                                              -- like the game: four numbers, or it errors (12 Nov 2026: a nil
                                              -- fill fired 1,040 errors from the coordinates ticker)
@@ -55,7 +55,7 @@ function CreateFrame(kind, name, parent)
                                                  assert(type(v[i]) == "number", "bad argument #" .. i .. " to 'SetColorTexture'")
                                                end
                                                t.colour = { r, g, b, a }
-                                             end }) end,
+                                             end }); return s.texs[#s.texs] end,
     CreateFontString = function() return stub({ SetText = function(t, x) t.text = x end }) end })
   frames[#frames + 1] = fr
   return fr
@@ -115,4 +115,10 @@ assert lua.eval("coordsText.rel ~= nil and coordsText.rgb[1] == 1 and coordsText
 assert list(lua.eval("coordsText.shadow").values()) == [1, -1], "1 px shadow"
 for f in list(lua.eval("tickers").values()):   # the coordinates ticker runs clean
     f()
+# the minimap button wears our own icon for your race, not the game's Peacebloom; a race we have no art for
+# (a pandaren) gets the human one
+icon = lua.eval("named('HomelandMinimapButton').texs[1].path")
+assert icon.endswith("icon_night_elf") and "Interface\\AddOns\\" in icon, icon
+lua.execute("UnitRace = function() return 'Pandaren', 'Pandaren' end; named('HomelandMinimapButton').scripts.OnEvent()")
+assert lua.eval("named('HomelandMinimapButton').texs[1].path").endswith("icon_human")
 print("map and panel checks pass")

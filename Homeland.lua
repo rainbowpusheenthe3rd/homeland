@@ -59,7 +59,8 @@ local COORDS_TEXT = { 1, 1, 1 }     -- white numbers ...
 local COORDS_SHADOW = { 1, -1 }     -- ... with a 1 px black shadow
 
 -- minimap button and its panel
-local BUTTON_ICON = "Interface\\Icons\\INV_Misc_Flower_02"              -- Peacebloom, the game's own icon
+local BUTTON_ICON = "icon_"         -- our own: icon_<race>.tga, a plant from your race's concept (tools/homeland_icon.py)
+local BUTTON_ICON_ELSE = "human"    -- the icon for a race we have no art for
 local BUTTON_MASK = "Interface\\CharacterFrame\\TempPortraitAlphaMask"
 local BUTTON_SIZE = 24
 local BUTTON_REST = 0.5             -- its opacity until you point at it
@@ -394,7 +395,11 @@ if Minimap then
     b:RegisterForDrag("LeftButton")
     local icon = b:CreateTexture(nil, "ARTWORK")
     icon:SetAllPoints()
-    icon:SetTexture(BUTTON_ICON)
+    local function Icon()
+        local _, file = UnitRace("player")
+        icon:SetTexture(DIR .. BUTTON_ICON .. (RACE[file or ""] or BUTTON_ICON_ELSE))
+    end
+    Icon()
     if icon.SetMask then icon:SetMask(BUTTON_MASK) end
     local function Place(angle)
         local r = Minimap:GetWidth() / 2 + BUTTON_GAP
@@ -402,7 +407,7 @@ if Minimap then
         b:SetPoint("CENTER", Minimap, "CENTER", r * math.cos(math.rad(angle)), r * math.sin(math.rad(angle)))
     end
     b:RegisterEvent("PLAYER_ENTERING_WORLD")                          -- saved variables are loaded by then
-    b:SetScript("OnEvent", function() Place(DB().buttonAngle or BUTTON_ANGLE) end)
+    b:SetScript("OnEvent", function() Icon(); Place(DB().buttonAngle or BUTTON_ANGLE) end)
 
     local panel
     local function Panel()

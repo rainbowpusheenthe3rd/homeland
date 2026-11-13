@@ -2,6 +2,7 @@
 ## Title: Homeland
 ## Version: 0.1.1
 ## SavedVariables: HomelandDB
+## IconTexture: Interface\AddOns\Homeland\icon
 ## Notes: Your race's homeland plants at the ends of the main action bar and round the minimap. /homeland
 
 Homeland.lua
