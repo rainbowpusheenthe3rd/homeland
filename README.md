@@ -8,6 +8,8 @@
 
 ![Night elf bar end caps in game](docs/caps_ingame.png)
 
+![The minimap button, one flower per race](docs/button_races.png)
+
 ### Your homeland, not your faction: your race's own flowers round the minimap and at the ends of your action bar.
 
 ## What you get
