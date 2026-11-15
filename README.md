@@ -19,8 +19,8 @@
   screen edge, and draggable if your bar sits somewhere else.
 - **Coordinates you can read at a glance**, set into the bottom of the frame like the engraved plate on a photo frame:
   black, rimmed in your race's colour, the numbers always crisp white.
-- **One panel, two sliders.** Click the minimap button: Square or Art nouveau, Opacity from 0 to 100%, and Size. Fade
-  the art right back for a quiet screen and the coordinates stay sharp.
+- **One panel, two sliders.** Click the minimap button, which wears a flower from your own race's art: Square or Art
+  nouveau, Opacity from 0 to 100%, and Size. Fade the art right back for a quiet screen and the coordinates stay sharp.
 - **Light to run.** No protected frames, so nothing breaks in combat, and addons that fade the action bar don't dim it.
 
 ## Why

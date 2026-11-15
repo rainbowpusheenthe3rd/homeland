@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 (2026-11-15)
 
 - The minimap button has its own icon instead of the game's Peacebloom: a plant from your race's own art (a dog
   rose for humans, heather for dwarves, a moonflower for night elves, a glowing mushroom for gnomes, a desert
