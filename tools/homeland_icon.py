@@ -28,6 +28,7 @@ CROPS = {
     "Undead": (602, 562, 190),      # pale mushrooms, bottom right
     "Tauren": (628, 158, 140),      # a white feather, top right, inside the printed border
     "Troll": (646, 242, 170),       # a magenta orchid, right side
+    "Skyborne": (234, 116, 150),    # a pale blue orchard blossom, top left (one icon for both sides)
 }
 
 

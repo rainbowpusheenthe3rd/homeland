@@ -38,6 +38,10 @@ PALETTE = {
     "undead": ((160, 188, 140), (156, 116, 186), (220, 230, 170)),       # deathcap, nightshade
     "tauren": ((212, 182, 122), (244, 212, 96), (190, 120, 60)),         # prairie grass, wildflower
     "troll": ((120, 192, 162), (232, 112, 200), (250, 230, 150)),        # palm, orchid
+    # Skyborne: silver-green stem, pale blue blossom; the side shows only in the flower's centre
+    "skyborne": ((176, 196, 186), (196, 214, 244), (120, 110, 200)),     # silverleaf, blossom, gustberry
+    "skyborne_horde": ((176, 196, 186), (196, 214, 244), (214, 64, 52)),      # ... a red poppy heart
+    "skyborne_alliance": ((176, 196, 186), (196, 214, 244), (72, 104, 220)),  # ... a cornflower heart
 }
 
 
@@ -173,7 +177,7 @@ def main(preview=None):
     if preview:   # each race over a stand-in minimap on night grass, and one on bright snow
         sheet = Image.new("RGBA", (4 * 300, 3 * 300), (40, 52, 40, 255))
         for k, im in enumerate(tiles + [tiles[0]]):
-            bg = Image.new("RGBA", (N, N), (226, 230, 236, 255) if k == 8 else (44, 58, 44, 255))
+            bg = Image.new("RGBA", (N, N), (226, 230, 236, 255) if k == len(tiles) else (44, 58, 44, 255))
             d = ImageDraw.Draw(bg)
             r = N / FIT / 2
             d.ellipse((C - r, C - r, C + r, C + r), fill=(28, 40, 30, 255), outline=(150, 120, 70, 255), width=5)

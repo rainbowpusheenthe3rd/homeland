@@ -24,6 +24,12 @@ local RACE = {                      -- UnitRace's file name -> our texture name
     Human = "human", Dwarf = "dwarf", NightElf = "night_elf", Gnome = "gnome",
     Orc = "orc", Scourge = "undead", Tauren = "tauren", Troll = "troll",
 }
+-- Skyborne (18 Nov 2026): one wreath for every Skyborne while on Zephras Isle, where both sides start; once they
+-- leave for their side's city (or choose a side, if the client keeps them Neutral until then) it fades to the same
+-- wreath with a few small red (Horde) or blue (Alliance) flowers, and stays. The race's file name isn't documented,
+-- so anything with "Sky" in its name or file counts; /homeland prints the file name.
+local SKY_ISLE = "Zephras Isle"
+local SKY_FADE = 4                  -- seconds to fade from the shared wreath to the side's
 local OPACITY = 1                   -- default opacity of all Homeland's art (0-1)
 local OPACITY_STEP = 0.05           -- the slider's step
 
@@ -47,6 +53,7 @@ local STYLES = { "painted", "nouveau" }  -- tab order
 local RACE_COLOUR = {               -- each race's main flower colour (tools/homeland_nouveau.py PALETTE), 0-255
     NightElf = { 240, 236, 255 }, Human = { 244, 196, 206 }, Dwarf = { 196, 136, 206 }, Gnome = { 124, 172, 240 },
     Orc = { 244, 130, 70 }, Scourge = { 156, 116, 186 }, Tauren = { 244, 212, 96 }, Troll = { 232, 112, 200 },
+    Skyborne = { 196, 214, 244 }, SkyborneHorde = { 214, 64, 52 }, SkyborneAlliance = { 72, 104, 220 },
 }
 local COORDS_PATTERN = "^%s*%-?%d+%.%d+,%s*%-?%d+%.%d+%s*$"   -- "37.6, 73.4"
 local COORDS_EVERY = 1              -- seconds between checks: find the text, keep it on the tab, fit the tab to it
@@ -126,6 +133,64 @@ local function SetSize(v)
     DB().style[Style()].size = math.max(st.min, math.min(st.max, v))
 end
 
+---------------------------------------------------------------------------------------------- whose art
+-- Returns the texture name ("night_elf", "skyborne", "skyborne_horde"...) and the RACE_COLOUR key, or nil for a race
+-- we have no art for.
+local function Skin()
+    local name, file = UnitRace("player")
+    local skin = RACE[file or ""]
+    if not skin and (tostring(file):find("Sky") or tostring(name):find("Sky")) then skin = "skyborne" end
+    if skin ~= "skyborne" then return skin, file end
+    local db, side, zone = DB(), UnitFactionGroup("player"), GetRealZoneText and GetRealZoneText() or ""
+    local chosen = side == "Horde" or side == "Alliance"
+    if chosen and (db.skySide == side or (zone ~= "" and zone ~= SKY_ISLE)) then
+        db.skySide = side              -- once left, always the side's wreath, even back on the isle
+        return "skyborne_" .. side:lower(), "Skyborne" .. side
+    end
+    return "skyborne", "Skyborne"
+end
+
+-- Sets a texture's art. A Skyborne's change of art while it's on screen fades over SKY_FADE seconds: a copy with the
+-- new art fades in over the old, then takes its place. Anything else is set at once.
+local fading, fader = {}, nil
+local function SetArt(t, path, alpha)
+    if t.fade then t.fade.alpha = alpha return end     -- mid-fade: only the target opacity can change
+    if t.artPath == path then t:SetAlpha(alpha) return end
+    local old = t.artPath
+    t.artPath = path
+    if not (old and old:find("skyborne") and path:find("skyborne")) then t:SetTexture(path); t:SetAlpha(alpha) return end
+    local layer, sub = t:GetDrawLayer()
+    local n = t.over or t:GetParent():CreateTexture(nil, layer, nil, math.min(7, (sub or 0) + 1))
+    t.over = n
+    n:ClearAllPoints()
+    n:SetAllPoints(t)
+    n:SetTexCoord(t:GetTexCoord())
+    n:SetVertexColor(t:GetVertexColor())
+    n:SetTexture(path)
+    n:SetAlpha(0)
+    n:Show()
+    t.fade = { start = GetTime(), alpha = alpha }
+    fading[t] = true
+    fader = fader or CreateFrame("Frame")
+    fader:SetScript("OnUpdate", function(self)
+        local any = false
+        for tex in pairs(fading) do
+            local k = math.min(1, (GetTime() - tex.fade.start) / SKY_FADE)
+            tex.over:SetAlpha(tex.fade.alpha * k)
+            tex:SetAlpha(tex.fade.alpha * (1 - k))
+            if k >= 1 then
+                tex:SetTexture(tex.artPath)
+                tex:SetAlpha(tex.fade.alpha)
+                tex.over:Hide()
+                tex.fade, fading[tex] = nil, nil
+            else
+                any = true
+            end
+        end
+        if not any then self:SetScript("OnUpdate", nil) end
+    end)
+end
+
 ---------------------------------------------------------------------------------------------- bar end caps
 local function Own(side, cap)
     if not holder then
@@ -142,20 +207,18 @@ end
 local function Apply()
     local caps = MainActionBar and MainActionBar.EndCaps
     if not caps or not caps.LeftEndCap then return end
-    local _, file = UnitRace("player")
-    local name = RACE[file or ""]
+    local name = Skin()
     if not name or not on then return end
     local out, up = Offset()
     for side, cap in pairs({ left = caps.LeftEndCap, right = caps.RightEndCap }) do
         cap.Texture:SetAlpha(0)
         local t = Own(side, cap)
-        t:SetTexture(DIR .. "cap_" .. name .. "_" .. side .. (Mode() == "hug" and "_hug" or ""))
         t:SetTexCoord(0, 1, 0, CAP_FILL)
         t:ClearAllPoints()
         local x = (side == "left" and -1 or 1) * out
         t:SetPoint("TOPLEFT", cap, "TOPLEFT", x, up)
         t:SetPoint("BOTTOMRIGHT", cap, "BOTTOMRIGHT", x, up)
-        t:SetAlpha(Opacity())
+        SetArt(t, DIR .. "cap_" .. name .. "_" .. side .. (Mode() == "hug" and "_hug" or ""), Opacity())
         t:SetShown(Opacity() > 0)
     end
     caps:Show()                     -- Neutral characters (pandaren before choosing) get no caps from Blizzard
@@ -163,8 +226,7 @@ end
 
 ---------------------------------------------------------------------------------------------- minimap frame
 local function Map()
-    local _, file = UnitRace("player")
-    local name = RACE[file or ""]
+    local name = Skin()
     if not name or not Minimap then return end
     if not map then
         map = CreateFrame("Frame", nil, Minimap:GetParent() or UIParent)
@@ -177,7 +239,7 @@ local function Map()
     map:SetSize(s, s)
     map:ClearAllPoints()
     map:SetPoint("CENTER", Minimap, "CENTER", 0, 0)
-    map.tex:SetTexture(DIR .. (Style() == "nouveau" and "nouveau_" or "map_") .. name)
+    SetArt(map.tex, DIR .. (Style() == "nouveau" and "nouveau_" or "map_") .. name, 1)
     local dim = STYLE[Style()].dim
     map.tex:SetVertexColor(dim, dim, dim)
     map:SetAlpha(Opacity())
@@ -207,8 +269,8 @@ local function Tab()
     if not map then return end
     coords = coords or FindCoords(_G.MinimapCluster, 0) or FindCoords(Minimap, 0)
     if not coords then return end
-    local _, file = UnitRace("player")
-    local c = RACE_COLOUR[file or ""] or { 255, 255, 255 }
+    local _, key = Skin()
+    local c = RACE_COLOUR[key or ""] or { 255, 255, 255 }
     local r, g, b = c[1] / 255, c[2] / 255, c[3] / 255
     if not tab then
         tab = CreateFrame("Frame", nil, map)
@@ -300,6 +362,8 @@ end
 
 local f = CreateFrame("Frame")
 f:RegisterEvent("PLAYER_ENTERING_WORLD")
+-- a Skyborne leaving Zephras Isle, or choosing a side: each event is tried, as either may not exist in this client
+for _, e in ipairs({ "ZONE_CHANGED_NEW_AREA", "NEUTRAL_FACTION_SELECT_RESULT" }) do pcall(f.RegisterEvent, f, e) end
 f:SetScript("OnEvent", function()
     if MainActionBar and MainActionBar.UpdateEndCaps and not f.hooked then
         hooksecurefunc(MainActionBar, "UpdateEndCaps", Apply)
@@ -396,8 +460,9 @@ if Minimap then
     local icon = b:CreateTexture(nil, "ARTWORK")
     icon:SetAllPoints()
     local function Icon()
-        local _, file = UnitRace("player")
-        icon:SetTexture(DIR .. BUTTON_ICON .. (RACE[file or ""] or BUTTON_ICON_ELSE))
+        local skin = Skin()
+        if skin and skin:find("^skyborne") then skin = "skyborne" end  -- one icon for every Skyborne
+        icon:SetTexture(DIR .. BUTTON_ICON .. (skin or BUTTON_ICON_ELSE))
     end
     Icon()
     if icon.SetMask then icon:SetMask(BUTTON_MASK) end

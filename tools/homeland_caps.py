@@ -23,7 +23,8 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT
-RACES = ["Human", "Dwarf", "Night_Elf", "Gnome", "Orc", "Undead", "Tauren", "Troll"]
+RACES = ["Human", "Dwarf", "Night_Elf", "Gnome", "Orc", "Undead", "Tauren", "Troll",
+         "Skyborne", "Skyborne_Horde", "Skyborne_Alliance"]   # Skyborne: shared on Zephras Isle, then by side
 W, H = 256, 158                      # 154 x 95 aspect
 CROP_W = 0.46                        # fraction of the concept's width taken for one cap
 INSET = {"Night_Elf": 0.12}       # step in from the outer and bottom edges, past the concept's printed border
