@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.0 (2026-11-20)
+
+- Skyborne get their own art. On Zephras Isle, where both sides start, every Skyborne shares one wind-blown wreath (orchard blossom, gustberries, silverleaf, dandelion clocks) with matching bar end caps. On leaving the isle, or choosing a side, the frame fades over 4 seconds to the same wreath with two small cornflowers: red for the Horde, blue for the Alliance. Your side is remembered after that, even back on the isle.
+- One minimap button icon for every Skyborne.
+- The minimap button's flower has a thin dark ring outside its gold ring, so it stands out on light ground.
+
 ## 0.2.0 (2026-11-15)
 
 - The minimap button has its own icon instead of the game's Peacebloom: a plant from your race's own art (a dog

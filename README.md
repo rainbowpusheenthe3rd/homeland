@@ -17,6 +17,9 @@
 - **A frame for your minimap**, grown from your race's plants: moonflowers for night elves, dog roses for humans,
   heather for dwarves, blue mushrooms for gnomes, cactus flowers for orcs, nightshade for the undead, prairie
   wildflowers for tauren, orchids for trolls. Painted and square, or drawn in art nouveau curves.
+- **Skyborne too.** On Zephras Isle every Skyborne shares one wind-blown wreath: orchard blossom, gustberries,
+  silverleaf and dandelion clocks. Leave for your side's city and it fades to the same wreath with two small
+  cornflowers, red for the Horde, blue for the Alliance, and stays that way.
 - **Bar end caps to match**, in place of the gryphons or wyverns, with the heavy end against the bar or out at the
   screen edge, and draggable if your bar sits somewhere else.
 - **Coordinates you can read at a glance**, set into the bottom of the frame like the engraved plate on a photo frame:
@@ -31,7 +34,8 @@ The default interface tells you which faction you're on, and nothing about where
 has the same gryphons, every Horde player the same wyverns, and the minimap is a bare ring with the coordinates
 floating over whatever is behind it. Homeland gives each of the eight original races its own home on screen: the
 moonflowers of Teldrassil, the meadows of Elwynn, the heather of Dun Morogh, the mushrooms of Gnomeregan, the thorns of
-Durotar, the nightshade of Tirisfal, the grass of Mulgore and the orchids of the Echo Isles.
+Durotar, the nightshade of Tirisfal, the grass of Mulgore and the orchids of the Echo Isles. The Skyborne get the
+wind-blown orchards of Zephras Isle.
 
 ## Download
 
