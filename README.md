@@ -1,6 +1,8 @@
 # Homeland
 
-![The minimap frames, one per race](docs/map_frames.png)
+![The round wreaths, one per race and one for the Skyborne](docs/map_wreaths.png)
+
+![The square minimap frames, one per race](docs/map_frames.png)
 
 ![The Skyborne frames: shared on Zephras Isle, then Horde or Alliance](docs/map_skyborne.png)
 
@@ -16,18 +18,20 @@
 
 ## What you get
 
-- **A frame for your minimap**, grown from your race's plants: moonflowers for night elves, dog roses for humans,
-  heather for dwarves, blue mushrooms for gnomes, cactus flowers for orcs, nightshade for the undead, prairie
-  wildflowers for tauren, orchids for trolls. Painted and square, or drawn in art nouveau curves.
-- **Skyborne too.** On Zephras Isle every Skyborne shares one wind-blown wreath: orchard blossom, gustberries,
-  silverleaf and dandelion clocks. Leave for your side's city and it fades to the same wreath with two small
-  cornflowers, red for the Horde, blue for the Alliance, and stays that way.
+- **A wreath round your minimap**, grown from your race's plants and sized so it rings the round map: dog roses and
+  wheat for humans, pine and heather for dwarves, moonflowers for night elves, blueberries and brass cogs for
+  gnomes, a thorn ring with tusks for orcs, ivy and death caps for the undead, prairie flowers for tauren, palms and
+  orchids for trolls.
+- **Or the square painting, or art nouveau curves**, one click away in the panel.
+- **Skyborne too.** Every Skyborne gets a round wreath of blossom, maple and dandelion clocks. In the square style,
+  on Zephras Isle every Skyborne shares one wind-blown frame; leave for your side's city and it fades to the same
+  frame with two small cornflowers, red for the Horde, blue for the Alliance, and stays that way.
 - **Bar end caps to match**, in place of the gryphons or wyverns, with the heavy end against the bar or out at the
   screen edge, and draggable if your bar sits somewhere else.
 - **Coordinates you can read at a glance**, set into the bottom of the frame like the engraved plate on a photo frame:
   black, rimmed in your race's colour, the numbers always crisp white.
-- **One panel, two sliders.** Click the minimap button, which wears a flower from your own race's art: Square or Art
-  nouveau, Opacity from 0 to 100%, and Size. Fade the art right back for a quiet screen and the coordinates stay sharp.
+- **One panel, two sliders.** Click the minimap button, which wears a flower from your own race's art: Wreath, Square
+  or Art nouveau, Opacity from 0 to 100%, and Size. Fade the art right back for a quiet screen and the coordinates stay sharp.
 - **Light to run.** No protected frames, so nothing breaks in combat, and addons that fade the action bar don't dim it.
 
 ## Why
@@ -46,13 +50,14 @@ wind-blown orchards of Zephras Isle.
 3. Log in. Your race is picked up on its own; click the minimap button to choose a frame and set its opacity and size.
 
 Commands: `/homeland hug | corner` (where the caps' heavy end sits), `/homeland move` (drag the caps; again to
-finish), `/homeland reset`, `/homeland map square | nouveau | on | off | <size>`, `/homeland off | on`.
+finish), `/homeland reset`, `/homeland map wreath | square | nouveau | on | off | <size>`, `/homeland off | on`.
 
 <details>
 <summary>Art and development</summary>
 
 The bar end caps and the square minimap art are cut from AI-generated race concepts (MOSS-Image, Apache-2.0) by
-`tools/homeland_caps.py`; the art nouveau frames are drawn in code by `tools/homeland_nouveau.py`. Stillwater uses the
+`tools/homeland_caps.py`. The round wreaths are laid out in 2D, built and lit in Blender, painted by MOSS-Image over
+Blender's depth and colour maps, and cut out along Blender's colour map by `tools/homeland_wreath.py`; the art nouveau frames are drawn in code by `tools/homeland_nouveau.py`. Stillwater uses the
 same race palette; Homeland needs nothing else.
 
 For development, link the game's folder to this repo (a directory junction, run once):

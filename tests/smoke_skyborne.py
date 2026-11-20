@@ -53,33 +53,33 @@ def check(ok, what):
 
 lua.execute(event)
 m = lua.eval("mapframe()")
-check(m.tex.path.endswith("map_skyborne"), "on Zephras Isle: the shared Skyborne wreath")
+check(m.tex.path.endswith("wreath_skyborne"), "on Zephras Isle: the shared Skyborne wreath")
 check(lua.eval("named('HomelandMinimapButton').texs[1].path").endswith("icon_skyborne"), "the Skyborne icon")
 check(lua.eval("HomelandDB.skySide") is None, "no side remembered yet")
 
 lua.execute(f'ZONE = "Thunder Bluff"; {event}')
-check(m.tex.path.endswith("map_skyborne") and m.tex.over.path.endswith("map_skyborne_horde"),
+check(m.tex.path.endswith("wreath_skyborne") and m.tex.over.path.endswith("wreath_skyborne_horde"),
       "leaving the isle: the Horde wreath starts fading in over the shared one")
 lua.execute("tick(102)")
 check(abs(m.tex.over.alpha - 0.5) < 1e-6 and abs(m.tex.alpha - 0.5) < 1e-6, "halfway through the fade: half and half")
 lua.execute(f"{event}; tick(102.5)")
 check(m.tex.alpha < 0.5, "a refresh mid-fade doesn't restart or jump it")
 lua.execute("tick(105)")
-check(m.tex.path.endswith("map_skyborne_horde") and m.tex.alpha == 1 and not m.tex.over.shown,
+check(m.tex.path.endswith("wreath_skyborne_horde") and m.tex.alpha == 1 and not m.tex.over.shown,
       "after the fade: the Horde wreath, full strength, the overlay gone")
 check(lua.eval("HomelandDB.skySide") == "Horde", "the side is remembered")
 check(lua.eval("named('HomelandMinimapButton').texs[1].path").endswith("icon_skyborne"), "the icon stays the Skyborne one")
 
 lua.execute(f'ZONE = "Zephras Isle"; {event}')
-check(m.tex.path.endswith("map_skyborne_horde") and not m.tex.over.shown, "back on the isle: still Horde, no fade back")
+check(m.tex.path.endswith("wreath_skyborne_horde") and not m.tex.over.shown, "back on the isle: still Horde, no fade back")
 
 lua.execute(f'HomelandDB.skySide = nil; SIDE, ZONE = "Neutral", "Stormwind City"; {event}; tick(200)')
-check(m.tex.path.endswith("map_skyborne") and not m.tex.path.endswith("horde"), "a Neutral Skyborne keeps the shared wreath")
+check(m.tex.path.endswith("wreath_skyborne") and not m.tex.path.endswith("horde"), "a Neutral Skyborne keeps the shared wreath")
 
 lua.execute(f'SIDE = "Alliance"; {event}; tick(210)')
-check(m.tex.path.endswith("map_skyborne_alliance"), "choosing Alliance off the isle fades to the Alliance wreath")
+check(m.tex.path.endswith("wreath_skyborne_alliance"), "choosing Alliance off the isle fades to the Alliance wreath")
 
 lua.execute(f'UnitRace = function() return "Night Elf", "NightElf" end; {event}')
-check(m.tex.path.endswith("map_night_elf"), "other races are set at once, unchanged")
+check(m.tex.path.endswith("wreath_night_elf"), "other races are set at once, unchanged")
 print(f"{fails} failed")
 raise SystemExit(1 if fails else 0)

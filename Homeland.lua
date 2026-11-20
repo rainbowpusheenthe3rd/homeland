@@ -38,15 +38,22 @@ local CAP_FILL = 158 / 256          -- the cap occupies the TGA's top 158 rows
 local CAP_OFFSET = { hug = { 31, 6 }, corner = { 0, 0 } }   -- default {outwards, upwards} per mode, placed in game
 local HANDLE_COLOUR = { 0.3, 0.8, 0.4, 0.25 }               -- /homeland move's drag handles
 
--- minimap frame: the whole concept square behind the map, its empty centre round the map ("painted", the default),
+-- minimap frame: the round wreath ("wreath", the default since 0.4.0: each race's latest painting, cut by
+-- tools/homeland_wreath.py), the whole concept square behind the map, its empty centre round the map ("painted"),
 -- or the line-art frame ("nouveau"). Size is the art's width as a multiple of the minimap's: the concepts' open
 -- centre is about 60% of their width, so 1.45 tucks the art in close; the nouveau frame is drawn for exactly 1.7
--- (FIT in tools/homeland_nouveau.py) and can't go under 1.6 or its stems would cross onto the map.
+-- (FIT in tools/homeland_nouveau.py) and can't go under 1.6 or its stems would cross onto the map. Each wreath has
+-- its own default size (WREATH_FIT), which puts its inner edge just outside the map.
 local STYLE = {
+    wreath = { label = "Wreath", size = 1.55, min = 1.3, max = 2.4, dim = 1 },
     painted = { label = "Square", size = 1.4, min = 1.2, max = 2.2, dim = 0.8 },
     nouveau = { label = "Art nouveau", size = 1.7, min = 1.6, max = 2.2, dim = 1 },
 }
-local STYLES = { "painted", "nouveau" }  -- tab order
+local STYLES = { "wreath", "painted", "nouveau" }  -- tab order
+local WREATH_FIT = {                -- tools/homeland_wreath.py fit_size, by texture name (Skyborne: all three)
+    human = 1.75, dwarf = 1.40, night_elf = 1.52, gnome = 1.68, orc = 1.41, undead = 1.44, tauren = 1.53,
+    troll = 1.57, skyborne = 1.57, skyborne_horde = 1.57, skyborne_alliance = 1.57,
+}
 
 -- the coordinates' tab: an engraved plaque set into the bottom of the frame, like the label on a good photo frame.
 -- The plaque (black, rimmed in the race's colour) fades with the frame's opacity; the numbers stay full strength.
@@ -74,11 +81,11 @@ local BUTTON_REST = 0.5             -- its opacity until you point at it
 local BUTTON_ANGLE = 200            -- default place round the minimap's edge, degrees
 local BUTTON_GAP = 6                -- outside the minimap's edge, pixels
 local BUTTON_LEVEL = 8              -- frame levels above the minimap
-local PANEL_W, PANEL_H = 210, 118
+local PANEL_W, PANEL_H = 262, 118
 local PANEL_BG = { 0.05, 0.04, 0.08, 0.88 }
 local LAV = { 0.77, 0.73, 0.89 }    -- the panel's lavender: top line, tabs, slider track
 local LINE_ALPHA = 0.8              -- the one thin line along the panel's top
-local TAB_W, TAB_H, TAB_X, TAB_Y, TAB_GAP = 95, 20, 8, -6, 4
+local TAB_W, TAB_H, TAB_X, TAB_Y, TAB_GAP = 79, 20, 8, -6, 4
 local TAB_FILL = { on = 0.28, off = 0.06 }                      -- lavender behind the chosen / other tab
 local TAB_TEXT = { on = { 1, 0.95, 1 }, off = { 0.6, 0.58, 0.68 } }
 local SLIDER_X, SLIDER_Y, SLIDER_H, SLIDER_DROP = 10, -34, 16, 14  -- first label row; each slider sits 14 below its label
@@ -118,12 +125,20 @@ local function Offset()
     return o[1], o[2]
 end
 
-local function Style() return DB().mapStyle == "nouveau" and "nouveau" or "painted" end
+-- "square" was the slash command's name for painted; anything unknown (or nothing chosen yet) is the wreath
+local function Style()
+    local s = DB().mapStyle
+    if s == "square" then return "painted" end
+    return STYLE[s or ""] and s or "wreath"
+end
 
+local Skin
 local function Size()
     DB().style = DB().style or {}
     local saved = DB().style[Style()] or {}
-    return saved.size or STYLE[Style()].size
+    if saved.size then return saved.size end
+    if Style() == "wreath" then return WREATH_FIT[Skin() or ""] or STYLE.wreath.size end
+    return STYLE[Style()].size
 end
 
 local function SetSize(v)
@@ -136,7 +151,7 @@ end
 ---------------------------------------------------------------------------------------------- whose art
 -- Returns the texture name ("night_elf", "skyborne", "skyborne_horde"...) and the RACE_COLOUR key, or nil for a race
 -- we have no art for.
-local function Skin()
+function Skin()
     local name, file = UnitRace("player")
     local skin = RACE[file or ""]
     if not skin and (tostring(file):find("Sky") or tostring(name):find("Sky")) then skin = "skyborne" end
@@ -239,7 +254,8 @@ local function Map()
     map:SetSize(s, s)
     map:ClearAllPoints()
     map:SetPoint("CENTER", Minimap, "CENTER", 0, 0)
-    SetArt(map.tex, DIR .. (Style() == "nouveau" and "nouveau_" or "map_") .. name, 1)
+    local prefix = { wreath = "wreath_", painted = "map_", nouveau = "nouveau_" }
+    SetArt(map.tex, DIR .. prefix[Style()] .. name, 1)
     local dim = STYLE[Style()].dim
     map.tex:SetVertexColor(dim, dim, dim)
     map:SetAlpha(Opacity())
@@ -427,13 +443,13 @@ SlashCmdList.HOMELAND = function(msg)
         local arg = msg:match("^map%s+(%S+)")
         if arg == "off" or arg == "on" then
             DB().map = (arg == "on")
-        elseif arg == "nouveau" or arg == "painted" or arg == "square" then
-            DB().mapStyle = arg == "nouveau" and "nouveau" or "painted"
+        elseif arg == "wreath" or arg == "nouveau" or arg == "painted" or arg == "square" then
+            DB().mapStyle = (arg == "square") and "painted" or arg
         elseif tonumber(arg) then
             SetSize(tonumber(arg))
         end
         Map(); Tab()
-        print(("Homeland: minimap %s, %s, size %.2f. /homeland map square | nouveau | on | off | <size>")
+        print(("Homeland: minimap %s, %s, size %.2f. /homeland map wreath | square | nouveau | on | off | <size>")
             :format(DB().map == false and "off" or "on", STYLE[Style()].label, Size()))
     elseif msg == "reset" then
         DB().offset[Mode()] = nil

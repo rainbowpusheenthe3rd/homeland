@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0 (2026-11-20)
+
+- A new minimap style, Wreath, and the new default: a round wreath of your race's plants, sized so its inner edge rings the round map. Each race has its own: dog roses and wheat for humans, pine and heather for dwarves, moonflowers for night elves, blueberries and brass cogs for gnomes, a thorn ring with tusks for orcs, ivy and death caps for the undead, prairie flowers for tauren, palms and orchids for trolls, and blossom, maple and dandelion clocks for the Skyborne.
+- The square painting and the art nouveau frame are still there: the panel now has three tabs (Wreath, Square, Art nouveau), and `/homeland map wreath | square | nouveau` switches too. Each style keeps its own size.
+- If you never picked a style, you'll now see the Wreath; one click on Square brings the old look back. A style you picked yourself is kept.
+
 ## 0.3.0 (2026-11-20)
 
 - Skyborne get their own art. On Zephras Isle, where both sides start, every Skyborne shares one wind-blown wreath (orchard blossom, gustberries, silverleaf, dandelion clocks) with matching bar end caps. On leaving the isle, or choosing a side, the frame fades over 4 seconds to the same wreath with two small cornflowers: red for the Horde, blue for the Alliance. Your side is remembered after that, even back on the isle.

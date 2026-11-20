@@ -1,5 +1,5 @@
-r"""Smoke-test Homeland's minimap art and its panel: the square by default (size 1.4), the Art
-nouveau tab (1, 1.7), each style keeping its own opacity and size, the size slider's range per style, opacity 0
+r"""Smoke-test Homeland's minimap art and its panel: the round wreath by default (its fitted size), the Square tab
+(size 1.4), the Art nouveau tab (1, 1.7), each style keeping its own opacity and size, the size slider's range per style, opacity 0
 turning it off, and the slash commands."""
 from pathlib import Path
 
@@ -69,11 +69,15 @@ lua.execute(f"local f = load([==[{SRC}]==], 'Homeland', 't', _G); f('Homeland')"
 lua.execute("frames[1].scripts.OnEvent(); named('HomelandMinimapButton').scripts.OnEvent()")
 m = lua.eval("mapframe()")
 close = lambda a, b: abs(a - b) < 1e-6
-# the square by default, at the one opacity (100%)
-assert m.shown and close(m.alpha, 1) and close(m.w, 140) and m.tex.path.endswith("map_night_elf"), (m.alpha, m.w, m.tex.path)
+# the round wreath by default, at its own fitted size (night elf 1.52) and the one opacity (100%)
+assert m.shown and close(m.alpha, 1) and close(m.w, 152) and m.tex.path.endswith("wreath_night_elf"), (m.alpha, m.w, m.tex.path)
 lua.execute("click()")
 p = lua.eval("named('HomelandPanel')")
 assert p.shown and close(p.opacity.cur, 1) and close(p.opacity.max, 1), "opacity, 0 to 100%"
+assert close(p.size.cur, 1.52) and close(p.size.min, 1.3) and close(p.size.max, 2.4), "size, the wreath's range"
+# the Square tab: the original concept, size 1.4
+lua.execute("tab(2)")
+assert m.tex.path.endswith("map_night_elf") and close(m.w, 140), (m.tex.path, m.w)
 assert close(p.size.cur, 1.4) and close(p.size.min, 1.2) and close(p.size.max, 2.2), "size, the square's range"
 assert p.caps is None and p.alpha is None, "no other sliders"
 lua.execute("named('HomelandPanel').size:SetValue(1.62)")
@@ -82,12 +86,12 @@ lua.execute("named('HomelandPanel').size:SetValue(1.4)")
 lua.execute("named('HomelandPanel').opacity:SetValue(0.31)")
 assert close(m.alpha, 0.3) and close(lua.eval("HomelandDB.opacity"), 0.3), m.alpha     # snapped to 0.05 steps
 # the Art nouveau tab keeps the same opacity; size comes from its own default
-lua.execute("tab(2)")
+lua.execute("tab(3)")
 assert m.tex.path.endswith("nouveau_night_elf") and close(m.alpha, 0.3) and close(m.w, 170), (m.tex.path, m.alpha, m.w)
 assert close(p.size.min, 1.6) and close(p.size.cur, 1.7), "the nouveau frame's own range and size"
 lua.execute("named('HomelandPanel').size:SetValue(1.0)")
 assert close(m.w, 160), m.w                                            # can't go under 1.6
-lua.execute("tab(1)")
+lua.execute("tab(2)")
 assert m.tex.path.endswith("map_night_elf") and close(m.w, 140)
 # opacity 0 turns it off, raising it brings it back
 lua.execute("named('HomelandPanel').opacity:SetValue(0)")
@@ -99,6 +103,9 @@ lua.execute("SlashCmdList.HOMELAND('map nouveau')")
 assert m.tex.path.endswith("nouveau_night_elf")
 lua.execute("SlashCmdList.HOMELAND('map square'); SlashCmdList.HOMELAND('map 9')")
 assert close(m.w, 220), m.w                                            # clamped to the square's 2.2
+lua.execute("SlashCmdList.HOMELAND('map wreath')")
+assert m.tex.path.endswith("wreath_night_elf") and close(m.w, 152), (m.tex.path, m.w)   # back to the wreath's own size
+lua.execute("SlashCmdList.HOMELAND('map square')")
 lua.execute("SlashCmdList.HOMELAND('opacity 0.7')")
 assert close(m.alpha, 0.7)
 lua.execute("click()")
