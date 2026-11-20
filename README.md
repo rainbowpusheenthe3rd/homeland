@@ -2,6 +2,8 @@
 
 ![The minimap frames, one per race](docs/map_frames.png)
 
+![The Skyborne frames: shared on Zephras Isle, then Horde or Alliance](docs/map_skyborne.png)
+
 ![The night elf frame in game, with its panel and the coordinates set into the frame](docs/map_ingame.png)
 
 ![The bar end caps, one pair per race](docs/caps_races.png)
