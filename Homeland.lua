@@ -169,11 +169,17 @@ end
 -- new art fades in over the old, then takes its place. Anything else is set at once.
 local fading, fader = {}, nil
 local function SetArt(t, path, alpha)
-    if t.fade then t.fade.alpha = alpha return end     -- mid-fade: only the target opacity can change
+    if t.fade then
+        if t.artPath == path then t.fade.alpha = alpha return end   -- mid-fade to this art: only the opacity changes
+        -- other art mid-fade (a meditation ended in its first seconds): settle this fade at once, then start the next
+        t:SetTexture(t.artPath); t:SetAlpha(t.fade.alpha); t.over:Hide()
+        t.fade, fading[t] = nil, nil
+    end
     if t.artPath == path then t:SetAlpha(alpha) return end
     local old = t.artPath
     t.artPath = path
-    if not (old and old:find("skyborne") and path:find("skyborne")) then t:SetTexture(path); t:SetAlpha(alpha) return end
+    local fades = old and ((old:find("skyborne") and path:find("skyborne")) or old:find("dream_") or path:find("dream_"))
+    if not fades then t:SetTexture(path); t:SetAlpha(alpha) return end
     local layer, sub = t:GetDrawLayer()
     local n = t.over or t:GetParent():CreateTexture(nil, layer, nil, math.min(7, (sub or 0) + 1))
     t.over = n
@@ -239,8 +245,29 @@ local function Apply()
     caps:Show()                     -- Neutral characters (pandaren before choosing) get no caps from Blizzard
 end
 
+---------------------------------------------------------------------------------------------- dream wreaths
+-- Shan'do's meditations (/emerald dream) borrow the minimap frame for their own wreath while they play, and give it
+-- back when they end (21 Nov 2026). The wreath fades in and out like the Skyborne's, at your frame's own size, and
+-- only where you'd see your frame anyway (map on, opacity above 0). Nothing is saved: a reload or logout mid-meditation
+-- simply shows your own wreath again. Only art that ships is listed in `wreaths` (dream_<meditation id>.tga), so a
+-- meditation without one leaves your frame alone. Homeland never calls this itself.
+HomelandDream = { wreaths = {}, borrowed = nil }
+local Map
+function HomelandDream.Has(id) return HomelandDream.wreaths[id] == true end
+function HomelandDream.Borrow(id)
+    if not HomelandDream.Has(id) then return false end
+    HomelandDream.borrowed = id
+    if Map then Map() end
+    return true
+end
+function HomelandDream.Return()
+    if not HomelandDream.borrowed then return end
+    HomelandDream.borrowed = nil
+    if Map then Map() end
+end
+
 ---------------------------------------------------------------------------------------------- minimap frame
-local function Map()
+function Map()
     local name = Skin()
     if not name or not Minimap then return end
     if not map then
@@ -255,8 +282,9 @@ local function Map()
     map:ClearAllPoints()
     map:SetPoint("CENTER", Minimap, "CENTER", 0, 0)
     local prefix = { wreath = "wreath_", painted = "map_", nouveau = "nouveau_" }
-    SetArt(map.tex, DIR .. prefix[Style()] .. name, 1)
-    local dim = STYLE[Style()].dim
+    local dream = HomelandDream.borrowed
+    SetArt(map.tex, dream and (DIR .. "dream_" .. dream) or (DIR .. prefix[Style()] .. name), 1)
+    local dim = dream and 1 or STYLE[Style()].dim
     map.tex:SetVertexColor(dim, dim, dim)
     map:SetAlpha(Opacity())
     map:SetShown(on and DB().map ~= false and Opacity() > 0)

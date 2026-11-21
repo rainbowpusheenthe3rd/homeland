@@ -32,6 +32,7 @@ UISpecialFrames = {}
 tinsert = table.insert
 GameTooltip = stub({})
 function print() end
+function GetTime() return 0 end
 Minimap = stub({ GetParent = function() return UIParent end, GetFrameStrata = function() return "LOW" end,
                  GetFrameLevel = function() return 2 end, GetWidth = function() return 100 end })
 frames = {}
@@ -45,7 +46,7 @@ function CreateFrame(kind, name, parent)
     SetValue = function(s, v)
       if s.min then v = math.max(s.min, math.min(s.max, v)) end
       s.cur = v; if s.scripts.OnValueChanged then s.scripts.OnValueChanged(s, v) end end,
-    CreateTexture = function(s) s.texs = s.texs or {}; s.texs[#s.texs + 1] = stub({ SetVertexColor = function(t, r) t.dim = r end,
+    CreateTexture = function(s) s.texs = s.texs or {}; s.texs[#s.texs + 1] = stub({ GetParent = function() return s end, SetVertexColor = function(t, r) t.dim = r end,
                                              SetTexture = function(t, p) t.path = p end,
                                              -- like the game: four numbers, or it errors (12 Nov 2026: a nil
                                              -- fill fired 1,040 errors from the coordinates ticker)
@@ -128,4 +129,21 @@ icon = lua.eval("named('HomelandMinimapButton').texs[1].path")
 assert icon.endswith("icon_night_elf") and "Interface\\AddOns\\" in icon, icon
 lua.execute("UnitRace = function() return 'Pandaren', 'Pandaren' end; named('HomelandMinimapButton').scripts.OnEvent()")
 assert lua.eval("named('HomelandMinimapButton').texs[1].path").endswith("icon_human")
+# dream wreaths: a meditation with no art shipped leaves your frame alone; one with art takes the frame at your own
+# size, full strength, then gives it back to your style; nothing about it is saved
+lua.execute("UnitRace = function() return 'Night Elf', 'NightElf' end; HomelandDB = { mapStyle = 'painted' }")
+lua.execute("SlashCmdList.HOMELAND('map on')")
+assert m.tex.path.endswith("map_night_elf") and close(m.w, 140)
+assert lua.eval("HomelandDream.Borrow('acorn')") is False and m.tex.path.endswith("map_night_elf")
+lua.execute("HomelandDream.wreaths.acorn = true")
+assert lua.eval("HomelandDream.Borrow('acorn')") is True
+assert lua.eval("mapframe().tex.artPath").endswith("dream_acorn") and close(m.w, 140), m.w
+assert lua.eval("mapframe().tex.dim") == 1, "the dream wreath at full strength, not the square's 0.8"
+assert "dream" not in str(list(lua.eval("HomelandDB").keys())), "nothing saved"
+lua.execute("HomelandDream.Return(); HomelandDream.Return()")      # twice is harmless
+assert lua.eval("mapframe().tex.artPath").endswith("map_night_elf") and lua.eval("HomelandDream.borrowed") is None
+assert lua.eval("mapframe().tex.dim") == 0.8
+lua.execute("SlashCmdList.HOMELAND('map off'); HomelandDream.Borrow('acorn')")
+assert not m.shown, "a hidden frame stays hidden"
+lua.execute("HomelandDream.Return(); SlashCmdList.HOMELAND('map on')")
 print("map and panel checks pass")

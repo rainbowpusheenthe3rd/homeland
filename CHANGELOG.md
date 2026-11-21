@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Dream wreaths, for Shan'do's meditations: while one plays, the minimap can wear that meditation's own wreath, fading in at the start and back to yours as the frogs fade. Only Shan'do asks for it, and only at your frame's own size, opacity and visibility; nothing is saved. The wreaths themselves are still to be painted, so for now nothing changes on screen.
+- Fixed an issue where a change of art arriving while the frame was still fading was ignored. It now finishes the first fade at once and starts the second.
+
 ## 0.4.0 (2026-11-20)
 
 - A new minimap style, Wreath, and the new default: a round wreath of your race's plants, sized so its inner edge rings the round map. Each race has its own: dog roses and wheat for humans, pine and heather for dwarves, moonflowers for night elves, blueberries and brass cogs for gnomes, a thorn ring with tusks for orcs, ivy and death caps for the undead, prairie flowers for tauren, palms and orchids for trolls, and blossom, maple and dandelion clocks for the Skyborne.
