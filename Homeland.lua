@@ -249,9 +249,10 @@ end
 -- Shan'do's meditations (/emerald dream) borrow the minimap frame for their own wreath while they play, and give it
 -- back when they end (21 Nov 2026). The wreath fades in and out like the Skyborne's, at your frame's own size, and
 -- only where you'd see your frame anyway (map on, opacity above 0). Nothing is saved: a reload or logout mid-meditation
--- simply shows your own wreath again. Only art that ships is listed in `wreaths` (dream_<meditation id>.tga), so a
+-- simply shows your own wreath again. Only art that ships is listed in `wreaths` (dream_<meditation id>.tga, made by
+-- tools/homeland_dream.py), so a
 -- meditation without one leaves your frame alone. Homeland never calls this itself.
-HomelandDream = { wreaths = {}, borrowed = nil }
+HomelandDream = { wreaths = { acorn = true, ember = true }, borrowed = nil }   -- dream_acorn.tga, dream_ember.tga
 local Map
 function HomelandDream.Has(id) return HomelandDream.wreaths[id] == true end
 function HomelandDream.Borrow(id)

@@ -134,8 +134,8 @@ assert lua.eval("named('HomelandMinimapButton').texs[1].path").endswith("icon_hu
 lua.execute("UnitRace = function() return 'Night Elf', 'NightElf' end; HomelandDB = { mapStyle = 'painted' }")
 lua.execute("SlashCmdList.HOMELAND('map on')")
 assert m.tex.path.endswith("map_night_elf") and close(m.w, 140)
-assert lua.eval("HomelandDream.Borrow('acorn')") is False and m.tex.path.endswith("map_night_elf")
-lua.execute("HomelandDream.wreaths.acorn = true")
+assert lua.eval("HomelandDream.Borrow('nosuch')") is False and m.tex.path.endswith("map_night_elf")
+assert lua.eval("HomelandDream.Has('acorn') and HomelandDream.Has('ember')"), "both dream wreaths ship"
 assert lua.eval("HomelandDream.Borrow('acorn')") is True
 assert lua.eval("mapframe().tex.artPath").endswith("dream_acorn") and close(m.w, 140), m.w
 assert lua.eval("mapframe().tex.dim") == 1, "the dream wreath at full strength, not the square's 0.8"

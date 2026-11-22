@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Dream wreaths, for Shan'do's meditations: while one plays, the minimap can wear that meditation's own wreath, fading in at the start and back to yours as the frogs fade. Only Shan'do asks for it, and only at your frame's own size, opacity and visibility; nothing is saved. The wreaths themselves are still to be painted, so for now nothing changes on screen.
+- Dream wreaths, for Shan'do's meditations: while one plays, the minimap can wear that meditation's own wreath, fading in at the start and back to yours as the frogs fade. Only Shan'do asks for it, and only at your frame's own size, opacity and visibility; nothing is saved. Two so far: oak, acorns, bramble and stag beetles for The acorn; poppies and ember-red maple for the ember meditation.
 - Fixed an issue where a change of art arriving while the frame was still fading was ignored. It now finishes the first fade at once and starts the second.
 
 ## 0.4.0 (2026-11-20)

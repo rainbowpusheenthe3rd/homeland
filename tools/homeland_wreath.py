@@ -71,7 +71,7 @@ def fit(alpha):
     return n / (2 * r_in), r_in / n
 
 
-def make(paint_path, rdir, layout_path, names):
+def make(paint_path, rdir, layout_path, names, prefix="wreath_"):
     paint = np.asarray(Image.open(paint_path).convert("RGB")).astype(float)
     cmap = np.asarray(Image.open(rdir / "colour.png").convert("RGB")).astype(float)
     rgb, alpha, edge = plant_alpha(paint, cmap, json.loads(Path(layout_path).read_text()))
@@ -79,7 +79,7 @@ def make(paint_path, rdir, layout_path, names):
     im = Image.fromarray((np.dstack([rgb / 255, alpha]) * 255).astype("uint8"), "RGBA").resize((512, 512),
                                                                                                Image.LANCZOS)
     for nm in names:
-        write_tga(im, ROOT / f"wreath_{nm}.tga")
+        write_tga(im, ROOT / f"{prefix}{nm}.tga")
     size, frac = fit(np.asarray(im)[..., 3] / 255)
     return size, frac
 
