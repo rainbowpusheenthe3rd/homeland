@@ -46,7 +46,7 @@ function CreateFrame(kind, name, parent)
     SetValue = function(s, v)
       if s.min then v = math.max(s.min, math.min(s.max, v)) end
       s.cur = v; if s.scripts.OnValueChanged then s.scripts.OnValueChanged(s, v) end end,
-    CreateTexture = function(s) s.texs = s.texs or {}; s.texs[#s.texs + 1] = stub({ GetParent = function() return s end, SetVertexColor = function(t, r) t.dim = r end,
+    CreateTexture = function(s) s.texs = s.texs or {}; s.texs[#s.texs + 1] = stub({ GetParent = function() return s end, SetAlpha = function(t, a) t.alpha = a end, SetVertexColor = function(t, r) t.dim = r end,
                                              SetTexture = function(t, p) t.path = p end,
                                              -- like the game: four numbers, or it errors (12 Nov 2026: a nil
                                              -- fill fired 1,040 errors from the coordinates ticker)
@@ -129,21 +129,43 @@ icon = lua.eval("named('HomelandMinimapButton').texs[1].path")
 assert icon.endswith("icon_night_elf") and "Interface\\AddOns\\" in icon, icon
 lua.execute("UnitRace = function() return 'Pandaren', 'Pandaren' end; named('HomelandMinimapButton').scripts.OnEvent()")
 assert lua.eval("named('HomelandMinimapButton').texs[1].path").endswith("icon_human")
-# dream wreaths: a meditation with no art shipped leaves your frame alone; one with art takes the frame at your own
-# size, full strength, then gives it back to your style; nothing about it is saved
-lua.execute("UnitRace = function() return 'Night Elf', 'NightElf' end; HomelandDB = { mapStyle = 'painted' }")
-lua.execute("SlashCmdList.HOMELAND('map on')")
-assert m.tex.path.endswith("map_night_elf") and close(m.w, 140)
-assert lua.eval("HomelandDream.Borrow('nosuch')") is False and m.tex.path.endswith("map_night_elf")
+# dream wreaths: a meditation with no art shipped leaves your frame alone; one with art gets its own frame at its own
+# fitted size (scaled as you've scaled yours), fading in as yours fades out, then the reverse; nothing is saved
+lua.execute("UnitRace = function() return 'Night Elf', 'NightElf' end; HomelandDB = {}")
+lua.execute("""
+function dreamframe()
+  for _, f in ipairs(frames) do
+    if f.parentFrame == mapframe() and f.tex and f.tex.path and f.tex.path:find('dream_') then return f end
+  end
+end
+function fade(secs) for _, f in ipairs(frames) do if f.scripts.OnUpdate then f.scripts.OnUpdate(f, secs) end end end
+""")
+lua.execute("SlashCmdList.HOMELAND('map on'); SlashCmdList.HOMELAND('map wreath')")
+assert m.tex.path.endswith("wreath_night_elf") and close(m.w, 152)
+assert lua.eval("HomelandDream.Borrow('nosuch')") is False and lua.eval("dreamframe()") is None
 assert lua.eval("HomelandDream.Has('acorn') and HomelandDream.Has('ember')"), "both dream wreaths ship"
 assert lua.eval("HomelandDream.Borrow('acorn')") is True
-assert lua.eval("mapframe().tex.artPath").endswith("dream_acorn") and close(m.w, 140), m.w
-assert lua.eval("mapframe().tex.dim") == 1, "the dream wreath at full strength, not the square's 0.8"
+d = lua.eval("dreamframe()")
+assert d.tex.path.endswith("dream_acorn") and close(d.w, 162), d.w     # its own fit, 1.62, not your 1.52
+assert d.shown and close(d.tex.alpha, 0) and close(m.tex.alpha, 1), "starts as yours"
+lua.execute("fade(2)")
+assert close(d.tex.alpha, 0.5) and close(m.tex.alpha, 0.5), (d.tex.alpha, m.tex.alpha)
+lua.execute("fade(3)")
+assert close(d.tex.alpha, 1) and close(m.tex.alpha, 0), "the dream's, after 4 s"
+assert m.w == 152 and close(m.alpha, 1), "your frame keeps its size and opacity (the plaque stays)"
 assert "dream" not in str(list(lua.eval("HomelandDB").keys())), "nothing saved"
-lua.execute("HomelandDream.Return(); HomelandDream.Return()")      # twice is harmless
-assert lua.eval("mapframe().tex.artPath").endswith("map_night_elf") and lua.eval("HomelandDream.borrowed") is None
-assert lua.eval("mapframe().tex.dim") == 0.8
-lua.execute("SlashCmdList.HOMELAND('map off'); HomelandDream.Borrow('acorn')")
+lua.execute("HomelandDream.Return(); HomelandDream.Return(); fade(1)")     # twice is harmless
+assert close(d.tex.alpha, 0.75) and d.shown, "fading back"
+lua.execute("HomelandDream.Borrow('acorn'); fade(1)")                       # borrowed again mid-fade: turns round
+assert close(d.tex.alpha, 1)
+lua.execute("HomelandDream.Return(); fade(5)")
+assert close(d.tex.alpha, 0) and close(m.tex.alpha, 1) and not d.shown and lua.eval("HomelandDream.borrowed") is None
+# sized up your own wreath? the dream's follows: 1.7 / 1.52 of its own fit
+lua.execute("SlashCmdList.HOMELAND('map 1.7'); HomelandDream.Borrow('ember')")
+assert d.tex.path.endswith("dream_ember") and close(d.w, 162 * 1.7 / 1.52), d.w
+lua.execute("HomelandDream.Return(); fade(5)")
+# a hidden frame stays hidden: the dream's frame is its child
+lua.execute("SlashCmdList.HOMELAND('map off'); HomelandDream.Borrow('acorn'); fade(5)")
 assert not m.shown, "a hidden frame stays hidden"
-lua.execute("HomelandDream.Return(); SlashCmdList.HOMELAND('map on')")
+lua.execute("HomelandDream.Return(); fade(5); SlashCmdList.HOMELAND('map on')")
 print("map and panel checks pass")

@@ -246,25 +246,68 @@ local function Apply()
 end
 
 ---------------------------------------------------------------------------------------------- dream wreaths
--- Shan'do's meditations (/emerald dream) borrow the minimap frame for their own wreath while they play, and give it
--- back when they end (21 Nov 2026). The wreath fades in and out like the Skyborne's, at your frame's own size, and
--- only where you'd see your frame anyway (map on, opacity above 0). Nothing is saved: a reload or logout mid-meditation
--- simply shows your own wreath again. Only art that ships is listed in `wreaths` (dream_<meditation id>.tga, made by
--- tools/homeland_dream.py), so a
--- meditation without one leaves your frame alone. Homeland never calls this itself.
-HomelandDream = { wreaths = { acorn = true, ember = true }, borrowed = nil }   -- dream_acorn.tga, dream_ember.tga
-local Map
+-- Shan'do's meditations (/emerald dream) borrow the minimap for their own wreath while they play, and give it back when
+-- they end (21 Nov 2026). The dream wreath has its own frame, drawn at its own fitted size (DREAM_FIT, printed by
+-- tools/homeland_dream.py) times however far you've sized your own wreath from its default, so its inner edge rings
+-- the map as yours does; yours fades out under it over DREAM_FADE seconds, and back after. It's a child of your frame,
+-- so it takes your opacity and stays hidden if your frame is hidden; the coordinates' plaque stays. Nothing is saved:
+-- a reload or logout mid-meditation simply shows your own wreath again. Only art that ships is listed in `wreaths`
+-- (dream_<meditation id>.tga), so a meditation without one leaves your frame alone. Homeland never calls this itself.
+local DREAM_FIT = { acorn = 1.62, ember = 1.62 }   -- art width / map width: the smallest with no plant under the map
+local DREAM_FADE = 4                               -- seconds
+HomelandDream = { wreaths = { acorn = true, ember = true }, borrowed = nil, mix = 0 }   -- mix: 0 yours, 1 the dream's
+local Map, dreamf, fadef
+
+local function DreamTick(self, elapsed)
+    local hd = HomelandDream
+    local target = hd.borrowed and 1 or 0
+    local step = elapsed / DREAM_FADE
+    hd.mix = target > hd.mix and math.min(target, hd.mix + step) or math.max(target, hd.mix - step)
+    if map then map.tex:SetAlpha(1 - hd.mix) end
+    if dreamf then
+        dreamf.tex:SetAlpha(hd.mix)
+        dreamf:SetShown(hd.mix > 0)
+    end
+    if hd.mix == target then self:SetScript("OnUpdate", nil) end
+end
+
+local function DreamFade()
+    fadef = fadef or CreateFrame("Frame")
+    fadef:SetScript("OnUpdate", DreamTick)
+end
+
 function HomelandDream.Has(id) return HomelandDream.wreaths[id] == true end
 function HomelandDream.Borrow(id)
     if not HomelandDream.Has(id) then return false end
     HomelandDream.borrowed = id
     if Map then Map() end
+    DreamFade()
     return true
 end
 function HomelandDream.Return()
     if not HomelandDream.borrowed then return end
-    HomelandDream.borrowed = nil
-    if Map then Map() end
+    HomelandDream.borrowed = nil      -- the dream's art stays on its frame until it has faded out
+    DreamFade()
+end
+
+-- The dream wreath's frame, sized and textured for the meditation borrowing it (or fading out of it).
+local function DreamFrame(name)
+    local id = HomelandDream.borrowed or (dreamf and HomelandDream.mix > 0 and dreamf.id)
+    if not id then return end
+    if not dreamf then
+        dreamf = CreateFrame("Frame", nil, map)
+        dreamf.tex = dreamf:CreateTexture(nil, "BACKGROUND")
+        dreamf.tex:SetAllPoints()
+    end
+    dreamf:SetFrameLevel(map:GetFrameLevel())                       -- under the map, like your own
+    local own = Style() == "wreath" and (WREATH_FIT[name] or STYLE.wreath.size) or Size()
+    local d = (DREAM_FIT[id] or STYLE.wreath.size) * Size() / own * Minimap:GetWidth()
+    dreamf:SetSize(d, d)
+    dreamf:ClearAllPoints()
+    dreamf:SetPoint("CENTER", Minimap, "CENTER", 0, 0)
+    if dreamf.id ~= id then dreamf.tex:SetTexture(DIR .. "dream_" .. id); dreamf.id = id end
+    dreamf.tex:SetAlpha(HomelandDream.mix)
+    dreamf:SetShown(HomelandDream.mix > 0 or HomelandDream.borrowed ~= nil)
 end
 
 ---------------------------------------------------------------------------------------------- minimap frame
@@ -283,12 +326,13 @@ function Map()
     map:ClearAllPoints()
     map:SetPoint("CENTER", Minimap, "CENTER", 0, 0)
     local prefix = { wreath = "wreath_", painted = "map_", nouveau = "nouveau_" }
-    local dream = HomelandDream.borrowed
-    SetArt(map.tex, dream and (DIR .. "dream_" .. dream) or (DIR .. prefix[Style()] .. name), 1)
-    local dim = dream and 1 or STYLE[Style()].dim
+    SetArt(map.tex, DIR .. prefix[Style()] .. name, 1)
+    if not map.tex.fade then map.tex:SetAlpha(1 - HomelandDream.mix) end   -- under a dream wreath, faded out
+    local dim = STYLE[Style()].dim
     map.tex:SetVertexColor(dim, dim, dim)
     map:SetAlpha(Opacity())
     map:SetShown(on and DB().map ~= false and Opacity() > 0)
+    DreamFrame(name)
 end
 
 ---------------------------------------------------------------------------------------------- the coordinates' tab
