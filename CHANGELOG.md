@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Wreaths keep the flowers that reach the old square frame's line: the night elf's top two moonflowers were sliced flat there, and edge flowers on other wreaths (Skyborne, troll, undead and more) were trimmed the same way.
+
 ## 0.4.0 (2026-11-20)
 
 - A new minimap style, Wreath, and the new default: a round wreath of your race's plants, sized so its inner edge rings the round map. Each race has its own: dog roses and wheat for humans, pine and heather for dwarves, moonflowers for night elves, blueberries and brass cogs for gnomes, a thorn ring with tusks for orcs, ivy and death caps for the undead, prairie flowers for tauren, palms and orchids for trolls, and blossom, maple and dandelion clocks for the Skyborne.
