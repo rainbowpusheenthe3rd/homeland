@@ -29,8 +29,12 @@ from homeland_caps import key, write_tga  # noqa: E402
 ROOT = Path(__file__).resolve().parents[1]
 RACES = ["Human", "Dwarf", "Night_Elf", "Gnome", "Orc", "Undead", "Tauren", "Troll"]
 SKY = ("ring", ["skyborne", "skyborne_horde", "skyborne_alliance"])     # the latest Skyborne layout
-GROUND_TOL = 12                       # colour-map distance from the ground below which a pixel is ground
+# The paintings 0.4.0 shipped, where a newer, unreviewed rendition now exists (r2c, 22 Nov 2026); without the pin
+# the newest painting is used
+PINNED = {r: "r2b" for r in ("Dwarf", "Night_Elf", "Orc", "Undead", "Tauren", "Troll")}
+GROUND_TOL = 12                      # colour-map distance from the ground below which a pixel is ground
 GROW, FEATHER, EDGE = 3, 1.5, 12
+THICK = 4                             # px radius: in the frame band, only parts this thick survive (flowers, not lines)
 
 
 def newest(paths):
@@ -45,13 +49,22 @@ def plant_alpha(paint, cmap, layout):
     n = cmap.shape[0]
     i = np.arange(n)
     edge = np.minimum(np.minimum(i, i[::-1])[None, :], np.minimum(i, i[::-1])[:, None])
+    no_band = geo.copy()                                   # the plants less the whole frame band: the ground estimate
+    yy, xx = np.mgrid[-THICK:THICK + 1, -THICK:THICK + 1]
+    thick = ndimage.binary_opening(geo, structure=xx ** 2 + yy ** 2 <= THICK ** 2)
     for s in layout["shapes"]:
         if "inset" in s:                                    # the square frame: a band round the edge
-            geo &= ~(np.abs(edge - s["inset"]) <= s["width"] + 8)
+            no_band &= ~(np.abs(edge - s["inset"]) <= s["width"] + 8)
+            band = np.abs(edge - s["inset"]) <= s["width"] + 8
+            # The thin frame line goes, and stems crossing it, but plants drawn over the band stay (23 Nov 2026: the
+            # night elf's top moonflowers were sliced where they crossed it): keep what survives an opening by a disc.
+            geo &= ~(band & ~thick)
     geo &= edge >= 4                                       # some colour maps carry a 1 px border (Orc)
     geo = ndimage.binary_dilation(geo, iterations=GROW)
     soft = np.clip(ndimage.gaussian_filter(geo.astype(float), FEATHER) * 1.5, 0, 1)
-    bg = np.median(paint[~geo], axis=0)                     # the painting's own ground
+    no_band &= edge >= 4
+    no_band = ndimage.binary_dilation(no_band, iterations=GROW)
+    bg = np.median(paint[~no_band], axis=0)                 # the painting's own ground, as before the band fix
     rgb, ka = key(paint, bg)
     return rgb, soft * ka, edge
 
@@ -89,7 +102,10 @@ def main(art):
     rows = []
     for race in RACES:
         d = art / "homeland_r2" / race
-        p = newest(list((d / "renditions").glob("*/moss.png")) + [d / "out" / "moss.png"])
+        if race in PINNED:
+            p = d / "renditions" / PINNED[race] / "moss.png"
+        else:
+            p = newest(list((d / "renditions").glob("*/moss.png")) + [d / "out" / "moss.png"])
         rdir = p.parent if p.parent.name != "out" else d / "renditions" / "r2b"
         if p.parent.name == "out" and not (rdir / "colour.png").exists():
             rdir = d / "out"
