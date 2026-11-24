@@ -23,6 +23,9 @@
   gnomes, a thorn ring with tusks for orcs, ivy and death caps for the undead, prairie flowers for tauren, palms and
   orchids for trolls.
 - **Or the square painting, or art nouveau curves**, one click away in the panel.
+- **Dream wreaths for [Shan'do](https://github.com/rainbowpusheenthe3rd/shando)'s meditations.** While one plays,
+  the minimap can wear that meditation's own wreath, then fades back to yours as the frogs fade: oak, acorns,
+  bramble and stag beetles for The acorn. Without Shan'do nothing changes.
 - **Skyborne too.** Every Skyborne gets a round wreath of blossom, maple and dandelion clocks. In the square style,
   on Zephras Isle every Skyborne shares one wind-blown frame; leave for your side's city and it fades to the same
   frame with two small cornflowers, red for the Horde, blue for the Alliance, and stays that way.
