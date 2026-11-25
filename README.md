@@ -2,6 +2,12 @@
 
 ![The round wreaths, one per race and one for the Skyborne](docs/map_wreaths.png)
 
+![In game: the night elf wreath and bar caps by moonlight on the Zoram Strand](docs/ingame_zoram_strand.jpg)
+
+![In game: Astranaar, with the wreath round the minimap and the caps at the ends of the bar](docs/ingame_astranaar.jpg)
+
+![In game: kneeling at a moonwell in Stonetalon, under the night elf wreath](docs/ingame_moonwell.jpg)
+
 ![The square minimap frames, one per race](docs/map_frames.png)
 
 ![The Skyborne frames: shared on Zephras Isle, then Horde or Alliance](docs/map_skyborne.png)
