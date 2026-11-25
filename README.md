@@ -12,6 +12,8 @@
 
 ![The Skyborne frames: shared on Zephras Isle, then Horde or Alliance](docs/map_skyborne.png)
 
+![The dream wreaths, worn while Shan'do's meditations play: The acorn and The ember](docs/dream_wreaths.png)
+
 ![The night elf frame in game, with its panel and the coordinates set into the frame](docs/map_ingame.png)
 
 ![The bar end caps, one pair per race](docs/caps_races.png)
@@ -31,7 +33,8 @@
 - **Or the square painting, or art nouveau curves**, one click away in the panel.
 - **Dream wreaths for [Shan'do](https://github.com/rainbowpusheenthe3rd/shando)'s meditations.** While one plays,
   the minimap can wear that meditation's own wreath, then fades back to yours as the frogs fade: oak, acorns,
-  bramble and stag beetles for The acorn. Without Shan'do nothing changes.
+  bramble and stag beetles for The acorn; fire poppies, ember-red maple and a small fire for The ember. Without
+  Shan'do nothing changes.
 - **Skyborne too.** Every Skyborne gets a round wreath of blossom, maple and dandelion clocks. In the square style,
   on Zephras Isle every Skyborne shares one wind-blown frame; leave for your side's city and it fades to the same
   frame with two small cornflowers, red for the Horde, blue for the Alliance, and stays that way.
