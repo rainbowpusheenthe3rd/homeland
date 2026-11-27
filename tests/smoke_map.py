@@ -17,6 +17,8 @@ function MainActionBar:UpdateEndCaps() end
 function hooksecurefunc() end
 function UnitRace() return "Night Elf", "NightElf" end
 SlashCmdList = {}
+month = "11"
+function date() return month end
 tickers = {}
 C_Timer = { NewTicker = function(_, f) tickers[#tickers + 1] = f end, After = function(_, f) f() end }
 -- the minimap's coordinate text, under the cluster, not Homeland's
@@ -46,7 +48,7 @@ function CreateFrame(kind, name, parent)
     SetValue = function(s, v)
       if s.min then v = math.max(s.min, math.min(s.max, v)) end
       s.cur = v; if s.scripts.OnValueChanged then s.scripts.OnValueChanged(s, v) end end,
-    CreateTexture = function(s) s.texs = s.texs or {}; s.texs[#s.texs + 1] = stub({ GetParent = function() return s end, SetAlpha = function(t, a) t.alpha = a end, SetVertexColor = function(t, r) t.dim = r end,
+    CreateTexture = function(s) s.texs = s.texs or {}; s.texs[#s.texs + 1] = stub({ GetParent = function() return s end, SetAlpha = function(t, a) t.alpha = a end, SetVertexColor = function(t, r, g, b) t.dim = r; t.rgb = { r, g, b } end,
                                              SetTexture = function(t, p) t.path = p end,
                                              -- like the game: four numbers, or it errors (12 Nov 2026: a nil
                                              -- fill fired 1,040 errors from the coordinates ticker)
@@ -59,6 +61,7 @@ function CreateFrame(kind, name, parent)
                                              end }); return s.texs[#s.texs] end,
     CreateFontString = function() return stub({ SetText = function(t, x) t.text = x end }) end })
   frames[#frames + 1] = fr
+  if name then _G[name] = fr end   -- named frames are globals in the game
   return fr
 end
 function mapframe() for _, f in ipairs(frames) do if f.tex then return f end end end
@@ -188,4 +191,34 @@ for gap in (1, 0):    # 1 s into the first's fade-out; a restart straight after 
 lua.execute("HomelandDream.Borrow('acorn'); fade(5); HomelandDream.Return(); fade(1); HomelandDream.Borrow('acorn'); fade(1)")
 assert d.tex.path.endswith("dream_acorn") and close(d.tex.alpha, 1)
 lua.execute("HomelandDream.Return(); fade(5)")
+# the season's tint (27 Nov 2026): on by default, the calendar's season without Manabloom, Manabloom's with it,
+# a month turning picked up by the ticker, off and on again from the slash command and the panel; the dream
+# wreaths keep their own colours
+def rgb(t):
+    return [float(v) for v in t.rgb.values()]
+
+lua.execute("SlashCmdList.HOMELAND('map wreath')")
+dim = rgb(m.tex)[0]
+assert lua.eval("ManabloomSeason") is None
+assert all(close(a, b) for a, b in zip(rgb(m.tex), [dim, dim * 0.86, dim * 0.7])), rgb(m.tex)   # November: autumn
+lua.execute("click() click()")                                         # open the panel
+assert lua.eval("named('HomelandPanel').season.text.text") == "Season's tint: autumn"
+lua.execute("ManabloomSeason = function() return 'winter' end SlashCmdList.HOMELAND('season')")
+assert all(close(a, b) for a, b in zip(rgb(m.tex), [dim * 0.84, dim * 0.9, dim])), rgb(m.tex)   # Manabloom's
+lua.execute("ManabloomSeason = function() return nil end SlashCmdList.HOMELAND('season')")   # not loaded yet
+assert close(rgb(m.tex)[2], dim * 0.7), "the calendar's, while Manabloom hasn't its settings"
+lua.execute("ManabloomSeason = function() return 'nonsense' end SlashCmdList.HOMELAND('season')")
+assert close(rgb(m.tex)[2], dim * 0.7), "the calendar's, if Manabloom says something unknown"
+lua.execute("ManabloomSeason = nil month = '1' for _, f in ipairs(tickers) do f() end")      # January: winter
+assert close(rgb(m.tex)[0], dim * 0.84), rgb(m.tex)
+lua.execute("SlashCmdList.HOMELAND('season off')")
+assert rgb(m.tex) == [dim, dim, dim] and lua.eval("HomelandDB.season") is False, rgb(m.tex)
+assert lua.eval("named('HomelandPanel').season.text.text") == "Season's tint: off"
+lua.execute("local s = named('HomelandPanel').season s.scripts.OnClick(s)")       # the panel turns it back on
+assert lua.eval("HomelandDB.season") is None and close(rgb(m.tex)[0], dim * 0.84), (lua.eval("HomelandDB.season"), rgb(m.tex), dim, lua.eval("month"))
+lua.execute("SlashCmdList.HOMELAND('season off') SlashCmdList.HOMELAND('season on')")
+assert lua.eval("HomelandDB.season") is None
+lua.execute("HomelandDream.Borrow('ember'); fade(5)")
+assert d.tex.rgb is None, "the dream wreath keeps its own colours"
+lua.execute("HomelandDream.Return(); fade(5); month = '11'")
 print("map and panel checks pass")

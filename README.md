@@ -35,6 +35,7 @@
   the minimap can wear that meditation's own wreath, then fades back to yours as the frogs fade: oak, acorns,
   bramble and stag beetles for The acorn; fire poppies, ember-red maple and a small fire for The ember. Without
   Shan'do nothing changes.
+- **The season in your wreath.** Warmer in autumn, cooler in winter: the calendar's season, or [Manabloom](https://github.com/rainbowpusheenthe3rd/manabloom)'s when it's installed, so the two agree. Off in the panel or with `/homeland season off`.
 - **Skyborne too.** Every Skyborne gets a round wreath of blossom, maple and dandelion clocks. In the square style,
   on Zephras Isle every Skyborne shares one wind-blown frame; leave for your side's city and it fades to the same
   frame with two small cornflowers, red for the Horde, blue for the Alliance, and stays that way.

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- The season tints your wreath: warmer in autumn, cooler in winter. It follows Manabloom's season when Manabloom is installed (so they agree, and `/manabloom season` sets both), or the calendar's. Switch it off in the panel or with `/homeland season off`. The dream wreaths keep their own colours.
 - Fixed an issue where starting a second meditation while the first one's dream wreath was still fading swapped the art in place, so the acorn wreath jumped to the ember wreath. The first wreath now fades out, then the next fades in.
 
 ## 0.5.0 (2026-11-24)

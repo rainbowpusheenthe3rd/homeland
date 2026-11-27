@@ -81,7 +81,7 @@ local BUTTON_REST = 0.5             -- its opacity until you point at it
 local BUTTON_ANGLE = 200            -- default place round the minimap's edge, degrees
 local BUTTON_GAP = 6                -- outside the minimap's edge, pixels
 local BUTTON_LEVEL = 8              -- frame levels above the minimap
-local PANEL_W, PANEL_H = 262, 118
+local PANEL_W, PANEL_H = 262, 142
 local PANEL_BG = { 0.05, 0.04, 0.08, 0.88 }
 local LAV = { 0.77, 0.73, 0.89 }    -- the panel's lavender: top line, tabs, slider track
 local LINE_ALPHA = 0.8              -- the one thin line along the panel's top
@@ -105,6 +105,20 @@ local function DB()
     HomelandDB = HomelandDB or {}
     HomelandDB.offset = HomelandDB.offset or {}
     return HomelandDB
+end
+
+-- The season tints your wreath (27 Nov 2026): warmer in autumn, cooler in winter. Manabloom's season when it's
+-- installed (so all three addons agree, and /manabloom season sets it), else the calendar's, by the same months.
+-- Off in the panel or with /homeland season off. The dream wreaths keep their own colours.
+local MONTHS = { "winter", "winter", "spring", "spring", "spring", "summer", "summer", "summer",
+                 "autumn", "autumn", "autumn", "winter" }
+local SEASON_TINT = { spring = { 1, 1, 1 }, summer = { 1, 0.97, 0.9 }, autumn = { 1, 0.86, 0.7 },
+                      winter = { 0.84, 0.9, 1 } }
+local SEASON_EVERY = 60             -- seconds between checks for a new season (a month turning, Manabloom's setting)
+local function Season()
+    if DB().season == false then return nil end
+    local s = type(_G.ManabloomSeason) == "function" and _G.ManabloomSeason() or nil
+    return SEASON_TINT[s] and s or MONTHS[tonumber(date("%m"))]
 end
 
 -- one opacity for everything; the old separate settings (capAlpha, per-style alpha) seed it once
@@ -336,7 +350,9 @@ function Map()
     SetArt(map.tex, DIR .. prefix[Style()] .. name, 1)
     if not map.tex.fade then map.tex:SetAlpha(1 - HomelandDream.mix) end   -- under a dream wreath, faded out
     local dim = STYLE[Style()].dim
-    map.tex:SetVertexColor(dim, dim, dim)
+    local tint = SEASON_TINT[Season()] or SEASON_TINT.spring
+    map.tex:SetVertexColor(dim * tint[1], dim * tint[2], dim * tint[3])
+    map.season = Season()
     map:SetAlpha(Opacity())
     map:SetShown(on and DB().map ~= false and Opacity() > 0)
     DreamFrame(name)
@@ -469,6 +485,7 @@ f:SetScript("OnEvent", function()
     if not f.ticking then              -- the coordinates appear late and their width changes: keep the tab fitted
         f.ticking = true
         C_Timer.NewTicker(COORDS_EVERY, Tab)
+        C_Timer.NewTicker(SEASON_EVERY, function() if map and map.season ~= Season() then Map() end end)
     end
 end)
 
@@ -531,6 +548,13 @@ SlashCmdList.HOMELAND = function(msg)
         Map(); Tab()
         print(("Homeland: minimap %s, %s, size %.2f. /homeland map wreath | square | nouveau | on | off | <size>")
             :format(DB().map == false and "off" or "on", STYLE[Style()].label, Size()))
+    elseif msg:match("^season") then
+        local arg = msg:match("^season%s+(%S+)")
+        if arg == "on" then DB().season = nil elseif arg == "off" then DB().season = false end
+        Map()
+        if HomelandPanel and HomelandPanel.Refresh then HomelandPanel.Refresh() end
+        print(("Homeland: the season's tint %s. /homeland season on | off"):format(
+            DB().season == false and "off" or ("on (" .. Season() .. ")")))
     elseif msg == "reset" then
         DB().offset[Mode()] = nil
         Apply()
@@ -646,7 +670,23 @@ if Minimap then
             SetSize(v)
             Map(); Tab()
         end)
+        local season = CreateFrame("Button", nil, panel)       -- the season's tint, on or off
+        season:SetSize(PANEL_W - 2 * SLIDER_X, TAB_H)
+        season:SetPoint("TOPLEFT", SLIDER_X, SLIDER_Y - 2 * SLIDER_ROW - 2)
+        season.bg = season:CreateTexture(nil, "BACKGROUND")
+        season.bg:SetAllPoints()
+        season.text = season:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        season.text:SetPoint("CENTER")
+        season:SetScript("OnClick", function()
+            if DB().season == false then DB().season = nil else DB().season = false end
+            Map()
+            panel.Refresh()
+        end)
         function panel.Refresh()
+            local k = DB().season == false and "off" or "on"
+            season.bg:SetColorTexture(LAV[1], LAV[2], LAV[3], TAB_FILL[k])
+            season.text:SetTextColor(TAB_TEXT[k][1], TAB_TEXT[k][2], TAB_TEXT[k][3])
+            season.text:SetText(k == "on" and ("Season's tint: " .. Season()) or "Season's tint: off")
             for _, t in ipairs(panel.tabs) do
                 local chosen = t.key == Style()
                 local k = chosen and "on" or "off"
@@ -660,7 +700,7 @@ if Minimap then
             size:SetValue(Size())
             quiet = false
         end
-        panel.opacity, panel.size = opacity, size
+        panel.opacity, panel.size, panel.season = opacity, size, season
         tinsert(UISpecialFrames, "HomelandPanel")                      -- Escape closes it
         panel:Hide()
         return panel
