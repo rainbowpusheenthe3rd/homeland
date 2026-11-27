@@ -260,7 +260,9 @@ local Map, dreamf, fadef
 
 local function DreamTick(self, elapsed)
     local hd = HomelandDream
-    local target = hd.borrowed and 1 or 0
+    -- another meditation's wreath still showing: fade it out first, never swap its art in place (25 Nov 2026)
+    local mine = hd.borrowed and dreamf and dreamf.id == hd.borrowed
+    local target = mine and 1 or 0
     local step = elapsed / DREAM_FADE
     hd.mix = target > hd.mix and math.min(target, hd.mix + step) or math.max(target, hd.mix - step)
     if map then map.tex:SetAlpha(1 - hd.mix) end
@@ -268,7 +270,11 @@ local function DreamTick(self, elapsed)
         dreamf.tex:SetAlpha(hd.mix)
         dreamf:SetShown(hd.mix > 0)
     end
-    if hd.mix == target then self:SetScript("OnUpdate", nil) end
+    if hd.mix == 0 and hd.borrowed and not mine then
+        if Map then Map() end      -- gone: now the new meditation's art goes on, and fades in from the next frame
+    elseif hd.mix == target then
+        self:SetScript("OnUpdate", nil)
+    end
 end
 
 local function DreamFade()
@@ -292,7 +298,8 @@ end
 
 -- The dream wreath's frame, sized and textured for the meditation borrowing it (or fading out of it).
 local function DreamFrame(name)
-    local id = HomelandDream.borrowed or (dreamf and HomelandDream.mix > 0 and dreamf.id)
+    -- while a wreath still shows, it keeps its art (and size) until it has faded out, whoever borrows next
+    local id = (dreamf and HomelandDream.mix > 0 and dreamf.id) or HomelandDream.borrowed
     if not id then return end
     if not dreamf then
         dreamf = CreateFrame("Frame", nil, map)

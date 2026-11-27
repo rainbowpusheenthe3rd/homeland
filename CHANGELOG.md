@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fixed an issue where starting a second meditation while the first one's dream wreath was still fading swapped the art in place, so the acorn wreath jumped to the ember wreath. The first wreath now fades out, then the next fades in.
+
 ## 0.5.0 (2026-11-24)
 
 - Dream wreaths, for Shan'do's meditations: while one plays, the minimap can wear that meditation's own wreath, fading in at the start and back to yours as the frogs fade. Only Shan'do asks for it. Each dream wreath is drawn at its own size, so its inner edge rings the map (and grows with yours if you've made yours bigger), at your opacity, and only if your frame is showing; nothing is saved. Two so far: oak, acorns, bramble and stag beetles for The acorn; poppies and ember-red maple for the ember meditation.

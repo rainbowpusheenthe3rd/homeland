@@ -168,4 +168,24 @@ lua.execute("HomelandDream.Return(); fade(5)")
 lua.execute("SlashCmdList.HOMELAND('map off'); HomelandDream.Borrow('acorn'); fade(5)")
 assert not m.shown, "a hidden frame stays hidden"
 lua.execute("HomelandDream.Return(); fade(5); SlashCmdList.HOMELAND('map on')")
+# meditations back to back (25 Nov 2026): a second one borrowing while the first's wreath still shows must not swap
+# the art in place; the first fades out, then the second fades in. Same when /emerald dream restarts mid-meditation.
+for gap in (1, 0):    # 1 s into the first's fade-out; a restart straight after Return
+    lua.execute(f"HomelandDream.Borrow('acorn'); fade(5); HomelandDream.Return(); fade({gap}); HomelandDream.Borrow('ember')")
+    a = 1 - gap / 4
+    assert d.tex.path.endswith("dream_acorn") and close(d.tex.alpha, a), (gap, d.tex.path, d.tex.alpha)
+    lua.execute("fade(0.5)")
+    assert d.tex.path.endswith("dream_acorn") and close(d.tex.alpha, a - 0.125), (gap, d.tex.path, d.tex.alpha)
+    lua.execute("fade(4)")                               # the acorn has gone; the ember starts from nothing
+    assert d.tex.path.endswith("dream_ember") and close(d.tex.alpha, 0), (gap, d.tex.path, d.tex.alpha)
+    lua.execute("fade(2)")
+    assert d.tex.path.endswith("dream_ember") and close(d.tex.alpha, 0.5) and close(m.tex.alpha, 0.5)
+    lua.execute("fade(5)")
+    assert close(d.tex.alpha, 1) and close(m.tex.alpha, 0) and lua.eval("HomelandDream.borrowed") == "ember"
+    lua.execute("HomelandDream.Return(); fade(5)")
+    assert close(d.tex.alpha, 0) and close(m.tex.alpha, 1) and not d.shown
+# the same meditation again mid-fade still just turns round (no dip to nothing)
+lua.execute("HomelandDream.Borrow('acorn'); fade(5); HomelandDream.Return(); fade(1); HomelandDream.Borrow('acorn'); fade(1)")
+assert d.tex.path.endswith("dream_acorn") and close(d.tex.alpha, 1)
+lua.execute("HomelandDream.Return(); fade(5)")
 print("map and panel checks pass")
